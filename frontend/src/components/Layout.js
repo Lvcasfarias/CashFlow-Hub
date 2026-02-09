@@ -16,6 +16,7 @@ export const Layout = ({ children }) => {
     { path: '/caixinhas', icon: Wallet, label: 'Caixinhas' },
     { path: '/transacoes', icon: ArrowLeftRight, label: 'Transações' },
     { path: '/recorrencias', icon: Calendar, label: 'Recorrências' },
+    { path: '/dividas', icon: TrendingDown, label: 'Dívidas' },
     { path: '/wishlist', icon: Heart, label: 'Wishlist' },
     { path: '/relatorios', icon: BarChart3, label: 'Relatórios' },
   ];
