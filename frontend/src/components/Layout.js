@@ -2,7 +2,7 @@ import React from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
-import { Home, Wallet, ArrowLeftRight, Calendar, Heart, BarChart3, LogOut, Moon, Sun } from 'lucide-react';
+import { Home, Wallet, ArrowLeftRight, Calendar, Heart, BarChart3, LogOut, Moon, Sun, TrendingDown } from 'lucide-react';
 import { Button } from './ui/button';
 
 export const Layout = ({ children }) => {
