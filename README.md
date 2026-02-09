@@ -27,36 +27,53 @@ Sistema self-hosted de controle financeiro pessoal com o método de caixinhas (e
 
 ## Instalação
 
-### 1. Clone o repositório
+### Pré-requisitos
+
+- Docker 20.10+
+- Docker Compose 2.0+
+- 4GB RAM mínimo
+- 10GB espaço em disco
+
+### Deploy Rápido
+
+**Opção 1: Script Automatizado (Recomendado)**
 
 ```bash
-git clone <seu-repositorio>
-cd financeiro-app
+chmod +x deploy.sh
+./deploy.sh
 ```
 
-### 2. Configure as variáveis de ambiente
-
-Edite o arquivo `docker-compose.yml` e altere:
-- `JWT_SECRET`: Coloque um secret forte e único
-- `POSTGRES_PASSWORD`: Altere a senha do banco de dados
-
-### 3. Inicie os containers
+**Opção 2: Manual**
 
 ```bash
-docker-compose up -d
+docker compose up -d
 ```
 
-O Docker irá:
-1. Baixar as imagens necessárias
-2. Construir os containers do frontend e backend
-3. Criar o banco de dados PostgreSQL
-4. Executar as migrations automaticamente
-5. Iniciar todos os serviços
+O sistema irá:
+1. Criar e iniciar o PostgreSQL
+2. Executar migrations automaticamente
+3. Iniciar o backend Node.js/Express
+4. Iniciar o frontend React com Nginx
 
-### 4. Acesse a aplicação
+### Acessar o Sistema
 
 - **Frontend**: http://localhost:3000
 - **Backend API**: http://localhost:8001/api
+
+### Primeiro Uso
+
+1. Acesse http://localhost:3000
+2. Clique em "Cadastre-se"
+3. Crie sua conta
+4. Configure suas caixinhas na página "Caixinhas"
+5. Comece a controlar suas finanças!
+
+📚 **Documentação completa de deploy**: Veja [DEPLOY.md](DEPLOY.md) para:
+- Backup e restore
+- Configurações de segurança
+- Expor na internet
+- Troubleshooting
+- Monitoramento
 
 ## Uso
 
