@@ -349,7 +349,7 @@ export const CaixinhasPage = () => {
                       <Progress
                         value={Math.min(percentualGasto, 100)}
                         className={`h-2 ${isNegative ? 'bg-red-500/20' : ''}`}
-                        indicatorClassName={isNegative ? 'bg-red-500' : 'bg-primary'}
+                        indicatorClassName={progressColor}
                       />
                       {isOverBudget && (
                         <p className="text-xs text-red-500 font-medium">
