@@ -61,10 +61,15 @@ const App = () => {
               path="/recorrencias"
               element={
                 <PrivateRoute>
-                  <div className="p-8 text-center">
-                    <h1 className="text-2xl font-bold">Recorrências</h1>
-                    <p className="text-muted-foreground mt-2">Em desenvolvimento</p>
-                  </div>
+                  <RecorrenciasPage />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/dividas"
+              element={
+                <PrivateRoute>
+                  <DividasPage />
                 </PrivateRoute>
               }
             />
@@ -83,10 +88,7 @@ const App = () => {
               path="/relatorios"
               element={
                 <PrivateRoute>
-                  <div className="p-8 text-center">
-                    <h1 className="text-2xl font-bold">Relatórios</h1>
-                    <p className="text-muted-foreground mt-2">Em desenvolvimento</p>
-                  </div>
+                  <RelatoriosPage />
                 </PrivateRoute>
               }
             />
