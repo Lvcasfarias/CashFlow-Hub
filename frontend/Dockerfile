@@ -3,6 +3,10 @@ FROM node:20-alpine as build
 
 WORKDIR /app
 
+# Variável de ambiente para o build
+ARG REACT_APP_BACKEND_URL
+ENV REACT_APP_BACKEND_URL=$REACT_APP_BACKEND_URL
+
 # Copiar arquivos de dependências
 COPY package*.json ./
 COPY yarn.lock ./
