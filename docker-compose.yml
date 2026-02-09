@@ -48,12 +48,12 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+      args:
+        REACT_APP_BACKEND_URL: http://localhost:8001
     container_name: financeiro-frontend
     restart: unless-stopped
     depends_on:
       - backend
-    environment:
-      REACT_APP_BACKEND_URL: http://localhost:8001
     ports:
       - "3000:80"
 
