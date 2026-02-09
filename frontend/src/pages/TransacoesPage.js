@@ -30,8 +30,9 @@ export const TransacoesPage = () => {
     try {
       setLoading(true);
       const mesAtual = new Date().toISOString().slice(0, 7);
+      const ultimoDia = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate();
       const [transacoesRes, caixinhasRes] = await Promise.all([
-        api.get(`/api/transacoes?dataInicio=${mesAtual}-01&dataFim=${mesAtual}-31`),
+        api.get(`/api/transacoes?dataInicio=${mesAtual}-01&dataFim=${mesAtual}-${ultimoDia}`),
         api.get(`/api/caixinhas?mes=${mesAtual}`)
       ]);
       setTransacoes(transacoesRes.data);
