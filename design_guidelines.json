@@ -1,0 +1,158 @@
+{
+  "identity": {
+    "persona": "E1: The Anti-AI Designer",
+    "mission": "Create a Self-Hosted Financial Control App that feels like a 'Command Center'—precise, high-contrast, and emotionally grounded in control and clarity.",
+    "archetype": "The Performance Pro (Dark Mode Focused)",
+    "tone": "Precision, Clarity, Control, Modernity"
+  },
+  "typography": {
+    "font_family": {
+      "headings": "Manrope, sans-serif",
+      "body": "Inter, sans-serif",
+      "mono": "JetBrains Mono, monospace"
+    },
+    "scale": {
+      "h1": "text-4xl md:text-5xl font-bold tracking-tight",
+      "h2": "text-3xl font-semibold tracking-tight",
+      "h3": "text-2xl font-medium tracking-tight",
+      "p": "text-base leading-relaxed text-muted-foreground",
+      "small": "text-sm font-medium text-muted-foreground/80",
+      "mono_num": "font-mono text-sm tracking-wide"
+    },
+    "usage_rules": [
+      "Use 'Manrope' for all Headings (h1-h3) to give a modern, geometric feel.",
+      "Use 'Inter' for body text for maximum readability.",
+      "Use 'JetBrains Mono' for ALL currency values, dates, and percentage calculations. This aligns with the 'Financial Control' aspect.",
+      "Headings > 32px must use 'tracking-tight'.",
+      "Labels and Overlines must be Uppercase, text-xs, and tracking-widest."
+    ]
+  },
+  "colors": {
+    "mode": "dark",
+    "palette": {
+      "background": "hsl(240 10% 3.9%)", 
+      "foreground": "hsl(0 0% 98%)",
+      "card": "hsl(240 10% 6%)",
+      "card_foreground": "hsl(0 0% 98%)",
+      "popover": "hsl(240 10% 6%)",
+      "popover_foreground": "hsl(0 0% 98%)",
+      "primary": "hsl(217 91% 60%)", 
+      "primary_foreground": "hsl(0 0% 100%)",
+      "secondary": "hsl(240 4% 16%)",
+      "secondary_foreground": "hsl(0 0% 98%)",
+      "muted": "hsl(240 4% 16%)",
+      "muted_foreground": "hsl(240 5% 64.9%)",
+      "accent": "hsl(240 4% 16%)",
+      "accent_foreground": "hsl(0 0% 98%)",
+      "destructive": "hsl(343 87% 60%)", 
+      "destructive_foreground": "hsl(0 0% 98%)",
+      "border": "hsl(240 4% 16%)",
+      "input": "hsl(240 4% 16%)",
+      "ring": "hsl(217 91% 60%)",
+      "success": "hsl(158 64% 52%)", 
+      "warning": "hsl(38 92% 50%)" 
+    },
+    "gradients": {
+      "primary_glow": "radial-gradient(circle at center, hsla(217, 91%, 60%, 0.15) 0%, transparent 70%)",
+      "danger_glow": "radial-gradient(circle at center, hsla(343, 87%, 60%, 0.15) 0%, transparent 70%)"
+    },
+    "rules": [
+      "CRITICAL: Do not use gradients for backgrounds. Use solid deep grays/blacks.",
+      "Use 'primary' color SPARINGLY. Only for the main CTA (e.g., 'Add Transaction') or active states.",
+      "Use 'success' (Emerald) for Income/Positive Balance.",
+      "Use 'destructive' (Rose) for Expenses/Debt/Negative Balance.",
+      "Never use pure black (#000000). Use the defined 'background' hsl(240 10% 3.9%)."
+    ]
+  },
+  "layout": {
+    "spacing_system": [
+      "p-4", "p-6", "p-8", "p-12", "p-16", "p-24"
+    ],
+    "grid_strategy": {
+      "dashboard_overview": "grid grid-cols-1 md:grid-cols-12 gap-6",
+      "card_grid": "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6",
+      "form_layout": "flex flex-col space-y-6 max-w-lg mx-auto"
+    },
+    "bento_rules": [
+      "Total Balance (Hero): col-span-full md:col-span-8 lg:col-span-6 row-span-2",
+      "Recent Transactions (List): col-span-full md:col-span-4 lg:col-span-3 row-span-2",
+      "Buckets Summary (Chart): col-span-full md:col-span-4 lg:col-span-3 row-span-2"
+    ],
+    "container_style": "max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 py-8"
+  },
+  "components": {
+    "cards": {
+      "style": "bg-card border border-border/50 rounded-xl shadow-sm",
+      "hover": "hover:border-primary/50 transition-colors duration-300",
+      "content_padding": "p-6"
+    },
+    "buttons": {
+      "primary": "bg-primary text-primary-foreground hover:bg-primary/90 shadow-[0_0_20px_rgba(37,99,235,0.3)] rounded-lg font-medium px-6 py-2 transition-all active:scale-95",
+      "secondary": "bg-secondary text-secondary-foreground hover:bg-secondary/80 rounded-lg font-medium px-6 py-2 transition-all active:scale-95",
+      "ghost": "hover:bg-accent hover:text-accent-foreground rounded-lg px-4 py-2"
+    },
+    "inputs": {
+      "style": "bg-background border border-input rounded-lg px-4 py-2 focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all placeholder:text-muted-foreground/50",
+      "error": "border-destructive focus:ring-destructive"
+    },
+    "charts": {
+      "library": "recharts",
+      "style": "Minimalist. Remove grid lines where possible. Use 'Tooltip' with custom dark styling.",
+      "colors": ["hsl(217 91% 60%)", "hsl(158 64% 52%)", "hsl(343 87% 60%)", "hsl(38 92% 50%)"]
+    },
+    "navigation": {
+      "desktop": "Sidebar fixed left. w-64 border-r border-border/40 bg-card/50 backdrop-blur-xl",
+      "mobile": "Bottom tab bar. Fixed bottom. border-t border-border/40 bg-background/90 backdrop-blur-lg"
+    }
+  },
+  "visual_enhancers": {
+    "glassmorphism": "backdrop-blur-xl bg-background/60 border border-white/10",
+    "borders": "1px solid hsl(var(--border))",
+    "shadows": "shadow-lg shadow-black/20",
+    "textures": "Use subtle noise overlay opacity-5 on the main background if possible, but keep it performant."
+  },
+  "image_urls": {
+    "login_background": {
+      "url": "https://images.unsplash.com/photo-1761998066478-821bf52c2849?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2ODh8MHwxfHNlYXJjaHwxfHxtaW5pbWFsaXN0JTIwYWJzdHJhY3QlMjBnZW9tZXRyaWMlMjBkYXJrJTIwYmFja2dyb3VuZHxlbnwwfHx8fDE3NzA2NzMxNjJ8MA&ixlib=rb-4.1.0&q=85",
+      "desc": "Abstract dark curved shapes, perfect for a login side panel."
+    },
+    "wishlist_empty": {
+      "url": "https://images.unsplash.com/photo-1640346876473-f76a73c71539?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2ODh8MHwxfHNlYXJjaHwzfHxtaW5pbWFsaXN0JTIwYWJzdHJhY3QlMjBnZW9tZXRyaWMlMjBkYXJrJTIwYmFja2dyb3VuZHxlbnwwfHx8fDE3NzA2NzMxNjJ8MA&ixlib=rb-4.1.0&q=85",
+      "desc": "Geometric cubes, use for empty states in Wishlist."
+    },
+    "dashboard_header_bg": {
+        "url": "https://images.unsplash.com/photo-1762258344624-52d8c3b74c66?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2ODh8MHwxfHNlYXJjaHwyfHxtaW5pbWFsaXN0JTIwYWJzdHJhY3QlMjBnZW9tZXRyaWMlMjBkYXJrJTIwYmFja2dyb3VuZHxlbnwwfHx8fDE3NzA2NzMxNjJ8MA&ixlib=rb-4.1.0&q=85",
+        "desc": "Dark textured surface, can be used as a subtle banner background."
+    }
+  },
+  "motion": {
+    "duration": "duration-300",
+    "ease": "ease-out",
+    "hover_effects": "hover:-translate-y-1 hover:shadow-lg",
+    "page_transition": "animate-in fade-in slide-in-from-bottom-4 duration-500"
+  },
+  "accessibility": {
+    "contrast_check": "Ensure text is APCA compliant.",
+    "focus_states": "All interactive elements MUST have a visible ring-2 ring-primary focus state.",
+    "aria_labels": "Buttons without text must have aria-label."
+  },
+  "instructions_to_main_agent": {
+    "theme_setup": "Initialize the app in Dark Mode by default. Add a 'theme-toggle' component in the settings, but optimize mostly for Dark.",
+    "charts": "Use 'recharts'. Customize the 'Tooltip' to be dark and minimal. Do not use default white tooltips.",
+    "buckets_visualization": "For the 'Buckets' (Caixinhas), use a Progress Bar component. If the value is negative (overspent), show the progress bar in RED and allow it to 'overflow' visually or indicate 'Over Budget'.",
+    "mobile_optimization": "Ensure the Dashboard stacks vertically on mobile. The Sidebar should vanish and become a Bottom Navigation bar or a Hamburger Menu.",
+    "data_test_ids": "Add data-testid='...' to all buttons, inputs, and major cards."
+  },
+  "universal_guidelines": [
+    "Do not use generic centered layouts. Use left-aligned text for data.",
+    "Create depth through layered design elements with z-index hierarchy.",
+    "Use glass-morphism effects with backdrop filters (12-24px blur) for headers and floating elements.",
+    "NEVER use AI assistant Emoji characters like 🤖🧠 etc.",
+    "Every interaction needs micro-animations - hover states, transitions.",
+    "Use 2-3x more spacing than feels comfortable.",
+    "Subtle grain textures/noise overlays separate good from extraordinary.",
+    "Prioritize using pre-existing components from src/components/ui when applicable.",
+    "Components MUST use named exports.",
+    "Use 'sonner' for toasts."
+  ]
+}
