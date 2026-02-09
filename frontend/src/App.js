@@ -7,6 +7,9 @@ import { LoginPage } from './pages/LoginPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { CaixinhasPage } from './pages/CaixinhasPage';
 import { TransacoesPage } from './pages/TransacoesPage';
+import { RecorrenciasPage } from './pages/RecorrenciasPage';
+import { DividasPage } from './pages/DividasPage';
+import { RelatoriosPage } from './pages/RelatoriosPage';
 import './App.css';
 
 const PrivateRoute = ({ children }) => {
