@@ -288,13 +288,25 @@ export const CaixinhasPage = () => {
                 : 0;
               const isNegative = parseFloat(caixinha.saldo_disponivel) < 0;
               const isOverBudget = percentualGasto > 100;
+              
+              // Alertas de cor baseados no percentual gasto
+              let progressColor = 'bg-primary';
+              let borderColor = 'border-border/50';
+              if (isNegative || percentualGasto > 100) {
+                progressColor = 'bg-red-500';
+                borderColor = 'border-red-500/50';
+              } else if (percentualGasto >= 95) {
+                progressColor = 'bg-orange-500';
+                borderColor = 'border-orange-500/50';
+              } else if (percentualGasto >= 80) {
+                progressColor = 'bg-yellow-500';
+                borderColor = 'border-yellow-500/50';
+              }
 
               return (
                 <div
                   key={caixinha.id}
-                  className={`bg-card border rounded-xl p-6 transition-all duration-300 hover:shadow-lg ${
-                    isNegative ? 'border-red-500/50' : 'border-border/50'
-                  }`}
+                  className={`bg-card border rounded-xl p-6 transition-all duration-300 hover:shadow-lg ${borderColor}`}
                   data-testid={`caixinha-card-${caixinha.id}`}
                 >
                   <div className="flex items-center justify-between mb-4">
