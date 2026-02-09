@@ -19,6 +19,8 @@ const caixinhasRoutes = require('./routes/caixinhas');
 const transacoesRoutes = require('./routes/transacoes');
 const recorrenciasRoutes = require('./routes/recorrencias');
 const wishlistRoutes = require('./routes/wishlist');
+const dividasRoutes = require('./routes/dividas');
+const dashboardsRoutes = require('./routes/dashboards');
 
 // Rotas da API
 app.get('/api', (req, res) => {
@@ -30,6 +32,8 @@ app.use('/api/caixinhas', caixinhasRoutes);
 app.use('/api/transacoes', transacoesRoutes);
 app.use('/api/recorrencias', recorrenciasRoutes);
 app.use('/api/wishlist', wishlistRoutes);
+app.use('/api/dividas', dividasRoutes);
+app.use('/api/dashboards', dashboardsRoutes);
 
 // Tratamento de erros global
 app.use((err, req, res, next) => {
