@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Layout } from '../components/Layout';
+import { useBalance } from '../context/BalanceContext';
 import api from '../lib/api';
 import { toast } from 'sonner';
 import { Plus, Heart, ShoppingBag, Calendar, Edit2, Trash2, Check } from 'lucide-react';
@@ -11,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Progress } from '../components/ui/progress';
 
 export const WishlistPage = () => {
+  const { refreshBalance } = useBalance();
   const [items, setItems] = useState([]);
   const [caixinhas, setCaixinhas] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -43,14 +45,18 @@ export const WishlistPage = () => {
       setLoading(true);
       const mesAtual = new Date().toISOString().slice(0, 7);
       const statusQuery = filtroStatus ? `?status=${filtroStatus}` : '';
+      
       const [itemsRes, caixinhasRes] = await Promise.all([
-        api.get(`/api/wishlist${statusQuery}`),
-        api.get(`/api/caixinhas?mes=${mesAtual}`)
+        api.get(`/api/wishlist${statusQuery}`).catch(() => ({ data: [] })),
+        api.get(`/api/caixinhas?mes=${mesAtual}`).catch(() => ({ data: [] }))
       ]);
-      setItems(itemsRes.data);
-      setCaixinhas(caixinhasRes.data);
+      
+      setItems(Array.isArray(itemsRes.data) ? itemsRes.data : []);
+      setCaixinhas(Array.isArray(caixinhasRes.data) ? caixinhasRes.data : []);
     } catch (error) {
-      toast.error('Erro ao carregar wishlist');
+      console.error('Erro ao carregar wishlist:', error);
+      setItems([]);
+      setCaixinhas([]);
     } finally {
       setLoading(false);
     }
@@ -60,7 +66,10 @@ export const WishlistPage = () => {
     e.preventDefault();
     try {
       const data = {
-        ...formData,
+        item: formData.item,
+        valorEstimado: parseFloat(formData.valorEstimado),
+        necessidade: parseInt(formData.necessidade),
+        desejo: parseInt(formData.desejo),
         caixinhaId: formData.caixinhaId ? parseInt(formData.caixinhaId) : null,
         aporteMensal: formData.aporteMensal ? parseFloat(formData.aporteMensal) : 0
       };
@@ -70,12 +79,13 @@ export const WishlistPage = () => {
         toast.success('Item atualizado!');
       } else {
         await api.post('/api/wishlist', data);
-        toast.success('Item adicionado a wishlist!');
+        toast.success('Item adicionado!');
       }
       setOpenDialog(false);
       resetForm();
       fetchData();
     } catch (error) {
+      console.error('Erro ao salvar:', error);
       toast.error('Erro ao salvar item');
     }
   };
@@ -88,23 +98,26 @@ export const WishlistPage = () => {
         caixinhaId: formComprar.caixinhaId ? parseInt(formComprar.caixinhaId) : null,
         valorReal: formComprar.valorReal ? parseFloat(formComprar.valorReal) : null
       });
-      toast.success('Item marcado como comprado!');
+      toast.success('Item comprado!');
       setOpenComprar(false);
       setItemSelecionado(null);
       setFormComprar({ caixinhaId: '', valorReal: '' });
       fetchData();
+      refreshBalance();
     } catch (error) {
+      console.error('Erro ao marcar comprado:', error);
       toast.error('Erro ao marcar como comprado');
     }
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm('Remover este item da wishlist?')) return;
+    if (!window.confirm('Remover este item?')) return;
     try {
       await api.delete(`/api/wishlist/${id}`);
       toast.success('Item removido!');
       fetchData();
     } catch (error) {
+      console.error('Erro ao remover:', error);
       toast.error('Erro ao remover');
     }
   };
@@ -112,10 +125,10 @@ export const WishlistPage = () => {
   const handleEdit = (item) => {
     setEditingItem(item);
     setFormData({
-      item: item.item,
-      valorEstimado: item.valor_estimado,
-      necessidade: String(item.necessidade),
-      desejo: String(item.desejo),
+      item: item.item || '',
+      valorEstimado: item.valor_estimado || '',
+      necessidade: item.necessidade ? String(item.necessidade) : '3',
+      desejo: item.desejo ? String(item.desejo) : '3',
       caixinhaId: item.caixinha_id ? String(item.caixinha_id) : '',
       aporteMensal: item.aporte_mensal || ''
     });
@@ -177,7 +190,7 @@ export const WishlistPage = () => {
         <div className="flex items-center justify-between flex-wrap gap-4">
           <div>
             <h1 className="text-4xl md:text-5xl font-bold tracking-tight">Wishlist</h1>
-            <p className="text-muted-foreground mt-2">Lista de desejos e compras planejadas</p>
+            <p className="text-muted-foreground mt-2">Lista de desejos</p>
           </div>
           <div className="flex gap-2">
             <Select value={filtroStatus} onValueChange={setFiltroStatus}>
@@ -195,7 +208,7 @@ export const WishlistPage = () => {
               <DialogTrigger asChild>
                 <Button data-testid="add-wishlist-btn">
                   <Plus className="w-4 h-4 mr-2" />
-                  Adicionar Desejo
+                  Adicionar
                 </Button>
               </DialogTrigger>
               <DialogContent>
@@ -237,7 +250,7 @@ export const WishlistPage = () => {
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="1">1 - Dispensavel</SelectItem>
-                          <SelectItem value="2">2 - Pouco Necessario</SelectItem>
+                          <SelectItem value="2">2 - Pouco</SelectItem>
                           <SelectItem value="3">3 - Moderado</SelectItem>
                           <SelectItem value="4">4 - Necessario</SelectItem>
                           <SelectItem value="5">5 - Essencial</SelectItem>
@@ -264,13 +277,13 @@ export const WishlistPage = () => {
                     </div>
                   </div>
                   <div>
-                    <Label>Vincular a Caixinha (opcional)</Label>
+                    <Label>Vincular a Caixinha</Label>
                     <Select
                       value={formData.caixinhaId}
                       onValueChange={(value) => setFormData({ ...formData, caixinhaId: value })}
                     >
                       <SelectTrigger>
-                        <SelectValue placeholder="Selecione uma caixinha" />
+                        <SelectValue placeholder="Selecione" />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="">Nenhuma</SelectItem>
@@ -283,18 +296,18 @@ export const WishlistPage = () => {
                     </Select>
                   </div>
                   <div>
-                    <Label>Aporte Mensal Planejado (R$)</Label>
+                    <Label>Aporte Mensal (R$)</Label>
                     <Input
                       type="number"
                       min="0"
                       step="0.01"
                       value={formData.aporteMensal}
                       onChange={(e) => setFormData({ ...formData, aporteMensal: e.target.value })}
-                      placeholder="Quanto pretende guardar por mes"
+                      placeholder="Quanto guardar por mes"
                     />
                   </div>
                   <Button type="submit" className="w-full" data-testid="submit-wishlist-btn">
-                    {editingItem ? 'Salvar Alteracoes' : 'Adicionar a Wishlist'}
+                    {editingItem ? 'Salvar' : 'Adicionar'}
                   </Button>
                 </form>
               </DialogContent>
@@ -302,22 +315,20 @@ export const WishlistPage = () => {
           </div>
         </div>
 
-        {items.length === 0 ? (
+        {!items || items.length === 0 ? (
           <div className="bg-card border border-border/50 rounded-xl p-12 text-center">
             <Heart className="w-16 h-16 mx-auto text-muted-foreground mb-4" />
             <h3 className="text-xl font-semibold mb-2">Sua wishlist esta vazia</h3>
-            <p className="text-muted-foreground mb-6">
-              Adicione itens que voce deseja comprar
-            </p>
+            <p className="text-muted-foreground mb-6">Adicione itens que voce deseja comprar</p>
             <Button onClick={() => setOpenDialog(true)}>
               <Plus className="w-4 h-4 mr-2" />
-              Adicionar Desejo
+              Adicionar
             </Button>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {items.map((item) => {
-              const prioridadeScore = item.prioridade_score;
+              const prioridadeScore = (parseInt(item.necessidade) || 0) + (parseInt(item.desejo) || 0);
               const isComprado = item.status === 'comprado';
 
               return (
@@ -337,11 +348,9 @@ export const WishlistPage = () => {
                     </div>
                     <div className="flex gap-1">
                       {!isComprado && (
-                        <>
-                          <Button variant="ghost" size="icon" onClick={() => handleEdit(item)}>
-                            <Edit2 className="w-4 h-4" />
-                          </Button>
-                        </>
+                        <Button variant="ghost" size="icon" onClick={() => handleEdit(item)}>
+                          <Edit2 className="w-4 h-4" />
+                        </Button>
                       )}
                       <Button variant="ghost" size="icon" onClick={() => handleDelete(item.id)}>
                         <Trash2 className="w-4 h-4 text-destructive" />
@@ -364,7 +373,7 @@ export const WishlistPage = () => {
                         <span>Necessidade</span>
                         <span>{item.necessidade}/5</span>
                       </div>
-                      <Progress value={(item.necessidade / 5) * 100} className="h-1" />
+                      <Progress value={((item.necessidade || 0) / 5) * 100} className="h-1" />
                     </div>
 
                     <div className="space-y-1">
@@ -372,7 +381,7 @@ export const WishlistPage = () => {
                         <span>Desejo</span>
                         <span>{item.desejo}/5</span>
                       </div>
-                      <Progress value={(item.desejo / 5) * 100} className="h-1" indicatorClassName="bg-pink-500" />
+                      <Progress value={((item.desejo || 0) / 5) * 100} className="h-1" indicatorClassName="bg-pink-500" />
                     </div>
 
                     {item.nome_caixinha && (
@@ -389,11 +398,6 @@ export const WishlistPage = () => {
                             Estimativa: <strong>{item.meses_para_comprar} meses</strong>
                           </span>
                         </div>
-                        {item.data_estimada_compra && (
-                          <p className="text-xs text-muted-foreground mt-1">
-                            Previsao: {new Date(item.data_estimada_compra).toLocaleDateString('pt-BR')}
-                          </p>
-                        )}
                       </div>
                     )}
 
@@ -408,7 +412,7 @@ export const WishlistPage = () => {
                         data-testid={`comprar-${item.id}`}
                       >
                         <ShoppingBag className="w-4 h-4 mr-2" />
-                        Marcar como Comprado
+                        Comprado
                       </Button>
                     )}
 
@@ -429,28 +433,28 @@ export const WishlistPage = () => {
         <Dialog open={openComprar} onOpenChange={setOpenComprar}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Marcar como Comprado - {itemSelecionado?.item}</DialogTitle>
+              <DialogTitle>Marcar Comprado - {itemSelecionado?.item}</DialogTitle>
             </DialogHeader>
             <form onSubmit={handleComprar} className="space-y-4 py-4">
               <div>
-                <Label>Valor Real da Compra (R$)</Label>
+                <Label>Valor Real (R$)</Label>
                 <Input
                   type="number"
                   min="0"
                   step="0.01"
                   value={formComprar.valorReal}
                   onChange={(e) => setFormComprar({ ...formComprar, valorReal: e.target.value })}
-                  placeholder="Deixe em branco para usar valor estimado"
+                  placeholder="Deixe vazio para usar estimado"
                 />
               </div>
               <div>
-                <Label>Debitar de Caixinha (opcional)</Label>
+                <Label>Debitar de Caixinha</Label>
                 <Select
                   value={formComprar.caixinhaId}
                   onValueChange={(value) => setFormComprar({ ...formComprar, caixinhaId: value })}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Selecione (opcional)" />
+                    <SelectValue placeholder="Opcional" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="">Nao debitar</SelectItem>
@@ -463,7 +467,7 @@ export const WishlistPage = () => {
                 </Select>
               </div>
               <Button type="submit" className="w-full" data-testid="confirm-comprar-btn">
-                Confirmar Compra
+                Confirmar
               </Button>
             </form>
           </DialogContent>
