@@ -21,15 +21,18 @@ export const RelatoriosPage = () => {
     try {
       setLoading(true);
       const [fluxoRes, distRes, projRes] = await Promise.all([
-        api.get('/api/dashboards/fluxo-caixa'),
-        api.get('/api/dashboards/distribuicao-categorias'),
-        api.get('/api/dashboards/projecao-futura')
+        api.get('/api/dashboards/fluxo-caixa').catch(() => ({ data: [] })),
+        api.get('/api/dashboards/distribuicao-categorias').catch(() => ({ data: [] })),
+        api.get('/api/dashboards/projecao-futura').catch(() => ({ data: [] }))
       ]);
-      setFluxoCaixa(fluxoRes.data);
-      setDistribuicao(distRes.data);
-      setProjecao(projRes.data);
+      setFluxoCaixa(fluxoRes.data || []);
+      setDistribuicao(distRes.data || []);
+      setProjecao(projRes.data || []);
     } catch (error) {
-      toast.error('Erro ao carregar relatórios');
+      console.error('Erro ao carregar relatorios:', error);
+      setFluxoCaixa([]);
+      setDistribuicao([]);
+      setProjecao([]);
     } finally {
       setLoading(false);
     }
