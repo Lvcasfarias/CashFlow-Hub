@@ -1,84 +1,70 @@
 #!/bin/bash
-
-# Script de Deploy Local - CashFlow Hub
-# Este script prepara e inicia todo o ambiente Docker
+# =====================================================
+# CASHFLOW HUB - Script de Deploy
+# Execute: chmod +x deploy.sh && ./deploy.sh
+# =====================================================
 
 set -e
 
-echo "🚀 CashFlow Hub - Deploy Local"
-echo "================================"
-echo ""
+echo "================================================="
+echo " CashFlow Hub - Deploy Script"
+echo "================================================="
 
-# Verificar se Docker está instalado
+# Verificar se Docker esta instalado
 if ! command -v docker &> /dev/null; then
-    echo "❌ Docker não está instalado. Por favor, instale o Docker primeiro."
-    echo "   Visite: https://docs.docker.com/get-docker/"
+    echo "ERRO: Docker nao esta instalado!"
     exit 1
 fi
 
-# Verificar se Docker Compose está disponível
-if ! docker compose version &> /dev/null; then
-    echo "❌ Docker Compose não está disponível."
+if ! command -v docker-compose &> /dev/null && ! docker compose version &> /dev/null; then
+    echo "ERRO: Docker Compose nao esta instalado!"
     exit 1
 fi
 
-echo "✅ Docker e Docker Compose detectados"
-echo ""
+# Definir IP do servidor
+SERVER_IP=${SERVER_IP:-192.168.1.51}
+echo ">> Usando IP do servidor: $SERVER_IP"
 
-# Parar containers existentes (se houver)
-echo "🛑 Parando containers existentes..."
-docker compose down 2>/dev/null || true
+# Parar containers existentes
 echo ""
+echo ">> Parando containers existentes..."
+docker-compose down 2>/dev/null || true
 
-# Limpar volumes antigos (opcional - comentado por segurança)
-# echo "🗑️  Limpando volumes antigos..."
-# docker compose down -v
-# echo ""
+# Limpar volumes antigos (opcional)
+read -p "Deseja limpar o banco de dados? (s/N): " clean_db
+if [[ "$clean_db" == "s" || "$clean_db" == "S" ]]; then
+    echo ">> Removendo volume do banco..."
+    docker volume rm financeiro-network_postgres_data 2>/dev/null || true
+fi
 
-# Build das imagens
-echo "🔨 Construindo imagens Docker..."
-docker compose build --no-cache
-echo ""
+# Exportar variavel de ambiente para o frontend
+export REACT_APP_BACKEND_URL="http://${SERVER_IP}:8001"
+echo ">> REACT_APP_BACKEND_URL=$REACT_APP_BACKEND_URL"
 
-# Iniciar serviços
-echo "🚀 Iniciando serviços..."
-docker compose up -d
+# Build e start dos containers
 echo ""
+echo ">> Construindo e iniciando containers..."
+docker-compose up --build -d
 
-# Aguardar PostgreSQL ficar pronto
-echo "⏳ Aguardando PostgreSQL ficar pronto..."
-sleep 5
+# Aguardar postgres iniciar
+echo ""
+echo ">> Aguardando PostgreSQL iniciar..."
+sleep 10
 
-# Verificar status dos serviços
+# Verificar status
 echo ""
-echo "📊 Status dos Serviços:"
-docker compose ps
-echo ""
+echo ">> Status dos containers:"
+docker-compose ps
 
-# Verificar logs
-echo "📝 Últimos logs do backend:"
-docker compose logs backend | tail -10
 echo ""
-
-# Instruções finais
-echo "================================"
-echo "✅ Deploy concluído com sucesso!"
+echo "================================================="
+echo " Deploy concluido!"
+echo "================================================="
 echo ""
-echo "📍 Acesse o sistema:"
-echo "   Frontend: http://localhost:3000"
-echo "   Backend API: http://localhost:8001/api"
+echo " Frontend: http://${SERVER_IP}:3000"
+echo " Backend:  http://${SERVER_IP}:8001"
+echo " API Test: http://${SERVER_IP}:8001/api"
 echo ""
-echo "🔧 Comandos úteis:"
-echo "   Ver logs: docker compose logs -f"
-echo "   Parar: docker compose down"
-echo "   Restart: docker compose restart"
-echo "   Limpar tudo: docker compose down -v"
-echo ""
-echo "📚 Primeiro acesso:"
-echo "   1. Acesse http://localhost:3000"
-echo "   2. Clique em 'Cadastre-se'"
-echo "   3. Crie sua conta"
-echo "   4. Configure suas caixinhas"
-echo "   5. Comece a usar!"
-echo ""
-echo "================================"
+echo " Para ver os logs: docker-compose logs -f"
+echo " Para parar: docker-compose down"
+echo "================================================="
