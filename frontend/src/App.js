@@ -10,6 +10,9 @@ import { TransacoesPage } from './pages/TransacoesPage';
 import { RecorrenciasPage } from './pages/RecorrenciasPage';
 import { DividasPage } from './pages/DividasPage';
 import { RelatoriosPage } from './pages/RelatoriosPage';
+import { CartoesPage } from './pages/CartoesPage';
+import { MetasPage } from './pages/MetasPage';
+import { WishlistPage } from './pages/WishlistPage';
 import './App.css';
 
 const PrivateRoute = ({ children }) => {
@@ -74,13 +77,26 @@ const App = () => {
               }
             />
             <Route
+              path="/cartoes"
+              element={
+                <PrivateRoute>
+                  <CartoesPage />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/metas"
+              element={
+                <PrivateRoute>
+                  <MetasPage />
+                </PrivateRoute>
+              }
+            />
+            <Route
               path="/wishlist"
               element={
                 <PrivateRoute>
-                  <div className="p-8 text-center">
-                    <h1 className="text-2xl font-bold">Wishlist</h1>
-                    <p className="text-muted-foreground mt-2">Em desenvolvimento</p>
-                  </div>
+                  <WishlistPage />
                 </PrivateRoute>
               }
             />
