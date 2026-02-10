@@ -21,6 +21,10 @@ const recorrenciasRoutes = require('./routes/recorrencias');
 const wishlistRoutes = require('./routes/wishlist');
 const dividasRoutes = require('./routes/dividas');
 const dashboardsRoutes = require('./routes/dashboards');
+const cartoesRoutes = require('./routes/cartoes');
+const metasRoutes = require('./routes/metas');
+const categoriasRoutes = require('./routes/categorias');
+const contasRoutes = require('./routes/contas');
 
 // Rotas da API
 app.get('/api', (req, res) => {
