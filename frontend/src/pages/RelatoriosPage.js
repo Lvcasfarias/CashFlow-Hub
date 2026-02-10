@@ -2,16 +2,37 @@ import React, { useState, useEffect } from 'react';
 import { Layout } from '../components/Layout';
 import api from '../lib/api';
 import { toast } from 'sonner';
-import { LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { Download, TrendingUp } from 'lucide-react';
+import { BarChart3, TrendingUp, PieChart, Filter } from 'lucide-react';
 import { Button } from '../components/ui/button';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
+import { Input } from '../components/ui/input';
+import { Label } from '../components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
+import {
+  LineChart,
+  Line,
+  BarChart,
+  Bar,
+  PieChart as RechartsPie,
+  Pie,
+  Cell,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+} from 'recharts';
+
+const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#6366F1', '#14B8A6'];
 
 export const RelatoriosPage = () => {
   const [fluxoCaixa, setFluxoCaixa] = useState([]);
   const [distribuicao, setDistribuicao] = useState([]);
   const [projecao, setProjecao] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [periodo, setPeriodo] = useState('6');
+  const [dataInicio, setDataInicio] = useState('');
+  const [dataFim, setDataFim] = useState('');
 
   useEffect(() => {
     fetchData();
@@ -20,14 +41,24 @@ export const RelatoriosPage = () => {
   const fetchData = async () => {
     try {
       setLoading(true);
+      
+      let fluxoUrl = `/api/dashboards/fluxo-caixa?meses=${periodo}`;
+      let projecaoUrl = `/api/dashboards/projecao-futura?meses=${periodo}`;
+      
+      if (dataInicio && dataFim) {
+        fluxoUrl = `/api/dashboards/fluxo-caixa?dataInicio=${dataInicio}&dataFim=${dataFim}`;
+        projecaoUrl = `/api/dashboards/projecao-futura?meses=${periodo}`;
+      }
+      
       const [fluxoRes, distRes, projRes] = await Promise.all([
-        api.get('/api/dashboards/fluxo-caixa').catch(() => ({ data: [] })),
+        api.get(fluxoUrl).catch(() => ({ data: [] })),
         api.get('/api/dashboards/distribuicao-categorias').catch(() => ({ data: [] })),
-        api.get('/api/dashboards/projecao-futura').catch(() => ({ data: [] }))
+        api.get(projecaoUrl).catch(() => ({ data: [] }))
       ]);
-      setFluxoCaixa(fluxoRes.data || []);
-      setDistribuicao(distRes.data || []);
-      setProjecao(projRes.data || []);
+      
+      setFluxoCaixa(Array.isArray(fluxoRes.data) ? fluxoRes.data : []);
+      setDistribuicao(Array.isArray(distRes.data) ? distRes.data : []);
+      setProjecao(Array.isArray(projRes.data) ? projRes.data : []);
     } catch (error) {
       console.error('Erro ao carregar relatorios:', error);
       setFluxoCaixa([]);
@@ -38,38 +69,17 @@ export const RelatoriosPage = () => {
     }
   };
 
+  const handleFiltrar = () => {
+    fetchData();
+  };
+
   const formatCurrency = (value) => {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
       currency: 'BRL',
-    }).format(value);
+      notation: 'compact',
+    }).format(value || 0);
   };
-
-  const formatMes = (mesStr) => {
-    const [ano, mes] = mesStr.split('-');
-    const meses = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
-    return `${meses[parseInt(mes) - 1]}/${ano.slice(2)}`;
-  };
-
-  const exportToCSV = (data, filename) => {
-    if (!data || data.length === 0) {
-      toast.error('Nenhum dado para exportar');
-      return;
-    }
-    const headers = Object.keys(data[0]);
-    const csvContent = [
-      headers.join(','),
-      ...data.map(row => headers.map(header => row[header] || '').join(','))
-    ].join('\n');
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = `${filename}_${new Date().toISOString().split('T')[0]}.csv`;
-    link.click();
-    toast.success('Exportado!');
-  };
-
-  const COLORS = ['hsl(217, 91%, 60%)', 'hsl(158, 64%, 52%)', 'hsl(343, 87%, 60%)', 'hsl(38, 92%, 50%)'];
 
   if (loading) {
     return (
@@ -83,137 +93,200 @@ export const RelatoriosPage = () => {
 
   return (
     <Layout>
-      <div className="space-y-8">
-        <div>
-          <h1 className="text-4xl md:text-5xl font-bold tracking-tight">Relatórios</h1>
-          <p className="text-muted-foreground mt-2">Visualize seus dados financeiros</p>
+      <div className="space-y-8" data-testid="relatorios-page">
+        <div className="flex items-center justify-between flex-wrap gap-4">
+          <div>
+            <h1 className="text-4xl md:text-5xl font-bold tracking-tight">Relatorios</h1>
+            <p className="text-muted-foreground mt-2">Analise suas financas</p>
+          </div>
         </div>
 
-        <Tabs defaultValue="fluxo" className="w-full">
-          <TabsList className="grid w-full max-w-2xl grid-cols-3">
-            <TabsTrigger value="fluxo">Fluxo</TabsTrigger>
-            <TabsTrigger value="categorias">Categorias</TabsTrigger>
-            <TabsTrigger value="projecao">Projeção</TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="fluxo" className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-2xl font-semibold">Fluxo de Caixa - Últimos 6 Meses</h2>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => exportToCSV(fluxoCaixa, 'fluxo_caixa')}
-              >
-                <Download className="w-4 h-4 mr-2" />
-                Exportar CSV
-              </Button>
+        {/* Filtros de Periodo */}
+        <div className="bg-card border border-border/50 rounded-xl p-4">
+          <div className="flex flex-wrap gap-4 items-end">
+            <div>
+              <Label className="text-xs">Periodo Rapido</Label>
+              <Select value={periodo} onValueChange={(value) => { setPeriodo(value); setDataInicio(''); setDataFim(''); }}>
+                <SelectTrigger className="w-40">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="3">Ultimos 3 meses</SelectItem>
+                  <SelectItem value="6">Ultimos 6 meses</SelectItem>
+                  <SelectItem value="12">Ultimo ano</SelectItem>
+                  <SelectItem value="24">Ultimos 2 anos</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
+            <div className="text-muted-foreground">ou</div>
+            <div>
+              <Label className="text-xs">Data Inicio</Label>
+              <Input
+                type="date"
+                value={dataInicio}
+                onChange={(e) => setDataInicio(e.target.value)}
+                className="w-40"
+              />
+            </div>
+            <div>
+              <Label className="text-xs">Data Fim</Label>
+              <Input
+                type="date"
+                value={dataFim}
+                onChange={(e) => setDataFim(e.target.value)}
+                className="w-40"
+              />
+            </div>
+            <Button onClick={handleFiltrar}>
+              <Filter className="w-4 h-4 mr-2" />
+              Aplicar
+            </Button>
+          </div>
+        </div>
 
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Fluxo de Caixa */}
+          <div className="bg-card border border-border/50 rounded-xl p-6">
+            <div className="flex items-center gap-3 mb-6">
+              <TrendingUp className="w-6 h-6 text-primary" />
+              <h2 className="text-xl font-semibold">Fluxo de Caixa</h2>
+            </div>
             {fluxoCaixa.length === 0 ? (
-              <div className="bg-card border border-border/50 rounded-xl p-12 text-center">
-                <TrendingUp className="w-16 h-16 mx-auto text-muted-foreground mb-4" />
-                <p className="text-muted-foreground">Sem dados</p>
+              <div className="h-64 flex items-center justify-center text-muted-foreground">
+                Sem dados para exibir
               </div>
             ) : (
-              <div className="bg-card border border-border/50 rounded-xl p-6">
-                <ResponsiveContainer width="100%" height={400}>
-                  <LineChart data={fluxoCaixa}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                    <XAxis dataKey="mes" tickFormatter={formatMes} stroke="hsl(var(--foreground))" />
-                    <YAxis stroke="hsl(var(--foreground))" />
-                    <Tooltip
-                      contentStyle={{
-                        backgroundColor: 'hsl(var(--card))',
-                        border: '1px solid hsl(var(--border))',
-                        borderRadius: '8px'
-                      }}
-                      formatter={(value) => formatCurrency(value)}
-                    />
-                    <Legend />
-                    <Line type="monotone" dataKey="entradas" stroke="hsl(158, 64%, 52%)" strokeWidth={2} name="Entradas" />
-                    <Line type="monotone" dataKey="saidas" stroke="hsl(343, 87%, 60%)" strokeWidth={2} name="Saídas" />
-                  </LineChart>
-                </ResponsiveContainer>
-              </div>
+              <ResponsiveContainer width="100%" height={300}>
+                <LineChart data={fluxoCaixa}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                  <XAxis 
+                    dataKey="mes" 
+                    stroke="hsl(var(--muted-foreground))"
+                    tick={{ fontSize: 12 }}
+                  />
+                  <YAxis 
+                    stroke="hsl(var(--muted-foreground))"
+                    tickFormatter={formatCurrency}
+                    tick={{ fontSize: 12 }}
+                  />
+                  <Tooltip 
+                    formatter={(value) => formatCurrency(value)}
+                    contentStyle={{
+                      backgroundColor: 'hsl(var(--card))',
+                      border: '1px solid hsl(var(--border))',
+                      borderRadius: '8px',
+                    }}
+                  />
+                  <Legend />
+                  <Line 
+                    type="monotone" 
+                    dataKey="entradas" 
+                    stroke="#10B981" 
+                    strokeWidth={2}
+                    dot={{ fill: '#10B981' }}
+                    name="Entradas"
+                  />
+                  <Line 
+                    type="monotone" 
+                    dataKey="saidas" 
+                    stroke="#EF4444" 
+                    strokeWidth={2}
+                    dot={{ fill: '#EF4444' }}
+                    name="Saidas"
+                  />
+                  <Line 
+                    type="monotone" 
+                    dataKey="saldo" 
+                    stroke="#3B82F6" 
+                    strokeWidth={2}
+                    dot={{ fill: '#3B82F6' }}
+                    name="Saldo"
+                  />
+                </LineChart>
+              </ResponsiveContainer>
             )}
-          </TabsContent>
+          </div>
 
-          <TabsContent value="categorias" className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-2xl font-semibold">Distribuição por Categorias</h2>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => exportToCSV(distribuicao, 'categorias')}
-              >
-                <Download className="w-4 h-4 mr-2" />
-                Exportar CSV
-              </Button>
+          {/* Distribuicao por Categoria */}
+          <div className="bg-card border border-border/50 rounded-xl p-6">
+            <div className="flex items-center gap-3 mb-6">
+              <PieChart className="w-6 h-6 text-primary" />
+              <h2 className="text-xl font-semibold">Distribuicao por Caixinha</h2>
             </div>
-
             {distribuicao.length === 0 ? (
-              <div className="bg-card border border-border/50 rounded-xl p-12 text-center">
-                <p className="text-muted-foreground">Sem dados</p>
+              <div className="h-64 flex items-center justify-center text-muted-foreground">
+                Sem dados para exibir
               </div>
             ) : (
-              <div className="bg-card border border-border/50 rounded-xl p-6">
-                <ResponsiveContainer width="100%" height={400}>
-                  <PieChart>
-                    <Pie
-                      data={distribuicao}
-                      dataKey="valor_gasto"
-                      nameKey="categoria"
-                      cx="50%"
-                      cy="50%"
-                      outerRadius={120}
-                      label
-                    >
-                      {distribuicao.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                      ))}
-                    </Pie>
-                    <Tooltip formatter={(value) => formatCurrency(value)} />
-                  </PieChart>
-                </ResponsiveContainer>
-              </div>
+              <ResponsiveContainer width="100%" height={300}>
+                <RechartsPie>
+                  <Pie
+                    data={distribuicao}
+                    dataKey="valor"
+                    nameKey="nome"
+                    cx="50%"
+                    cy="50%"
+                    outerRadius={100}
+                    label={({ nome, percent }) => `${nome} (${(percent * 100).toFixed(0)}%)`}
+                  >
+                    {distribuicao.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip 
+                    formatter={(value) => formatCurrency(value)}
+                    contentStyle={{
+                      backgroundColor: 'hsl(var(--card))',
+                      border: '1px solid hsl(var(--border))',
+                      borderRadius: '8px',
+                    }}
+                  />
+                </RechartsPie>
+              </ResponsiveContainer>
             )}
-          </TabsContent>
+          </div>
 
-          <TabsContent value="projecao" className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-2xl font-semibold">Projeção Próximos 6 Meses</h2>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => exportToCSV(projecao, 'projecao')}
-              >
-                <Download className="w-4 h-4 mr-2" />
-                Exportar CSV
-              </Button>
+          {/* Projecao Futura */}
+          <div className="bg-card border border-border/50 rounded-xl p-6 lg:col-span-2">
+            <div className="flex items-center gap-3 mb-6">
+              <BarChart3 className="w-6 h-6 text-primary" />
+              <h2 className="text-xl font-semibold">Projecao Futura ({periodo} Meses)</h2>
             </div>
-
-            <div className="bg-card border border-border/50 rounded-xl p-6">
-              {projecao.length === 0 ? (
-                <div className="text-center py-12">
-                  <p className="text-muted-foreground">Cadastre recorrências para ver projeção</p>
-                </div>
-              ) : (
-                <ResponsiveContainer width="100%" height={400}>
-                  <LineChart data={projecao}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                    <XAxis dataKey="mes" tickFormatter={formatMes} stroke="hsl(var(--foreground))" />
-                    <YAxis stroke="hsl(var(--foreground))" />
-                    <Tooltip formatter={(value) => formatCurrency(value)} />
-                    <Legend />
-                    <Line type="monotone" dataKey="entradas_previstas" stroke="hsl(158, 64%, 52%)" strokeWidth={2} name="Entradas" />
-                    <Line type="monotone" dataKey="saidas_previstas" stroke="hsl(343, 87%, 60%)" strokeWidth={2} name="Saídas" />
-                    <Line type="monotone" dataKey="saldo_projetado" stroke="hsl(217, 91%, 60%)" strokeWidth={3} name="Saldo" strokeDasharray="5 5" />
-                  </LineChart>
-                </ResponsiveContainer>
-              )}
-            </div>
-          </TabsContent>
-        </Tabs>
+            {projecao.length === 0 ? (
+              <div className="h-64 flex items-center justify-center text-muted-foreground">
+                Sem dados para projecao. Cadastre recorrencias para visualizar.
+              </div>
+            ) : (
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={projecao}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                  <XAxis 
+                    dataKey="mes" 
+                    stroke="hsl(var(--muted-foreground))"
+                    tick={{ fontSize: 12 }}
+                  />
+                  <YAxis 
+                    stroke="hsl(var(--muted-foreground))"
+                    tickFormatter={formatCurrency}
+                    tick={{ fontSize: 12 }}
+                  />
+                  <Tooltip 
+                    formatter={(value) => formatCurrency(value)}
+                    contentStyle={{
+                      backgroundColor: 'hsl(var(--card))',
+                      border: '1px solid hsl(var(--border))',
+                      borderRadius: '8px',
+                    }}
+                  />
+                  <Legend />
+                  <Bar dataKey="entradas_previstas" fill="#10B981" name="Entradas Previstas" />
+                  <Bar dataKey="saidas_previstas" fill="#EF4444" name="Saidas Previstas" />
+                  <Bar dataKey="saldo_projetado" fill="#3B82F6" name="Saldo Projetado" />
+                </BarChart>
+              </ResponsiveContainer>
+            )}
+          </div>
+        </div>
       </div>
     </Layout>
   );
