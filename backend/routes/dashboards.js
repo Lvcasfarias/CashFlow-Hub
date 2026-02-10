@@ -33,10 +33,10 @@ router.get('/fluxo-caixa', authMiddleware, async (req, res) => {
          COALESCE(SUM(CASE WHEN tipo = 'entrada' THEN valor ELSE -valor END), 0) as saldo
        FROM transacoes
        WHERE user_id = $1 
-         AND data >= CURRENT_DATE - INTERVAL '${meses} months'
+         AND data >= CURRENT_DATE - ($2 || ' months')::interval
        GROUP BY TO_CHAR(data, 'YYYY-MM')
        ORDER BY mes ASC`;
-      params = [req.userId];
+      params = [req.userId, meses];
     }
 
     const result = await pool.query(query, params);

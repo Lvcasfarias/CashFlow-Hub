@@ -48,7 +48,7 @@ router.get('/', authMiddleware, async (req, res) => {
         ...item,
         meses_para_comprar: mesesParaComprar,
         data_estimada_compra: dataEstimada,
-        prioridade_score: item.necessidade + item.desejo
+        prioridade_score: (parseFloat(item.necessidade) || 0) + (parseFloat(item.desejo) || 0)
       };
     });
 

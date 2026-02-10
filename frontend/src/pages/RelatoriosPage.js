@@ -47,13 +47,21 @@ export const RelatoriosPage = () => {
       
       if (dataInicio && dataFim) {
         fluxoUrl = `/api/dashboards/fluxo-caixa?dataInicio=${dataInicio}&dataFim=${dataFim}`;
-        projecaoUrl = `/api/dashboards/projecao-futura?meses=${periodo}`;
       }
       
       const [fluxoRes, distRes, projRes] = await Promise.all([
-        api.get(fluxoUrl).catch(() => ({ data: [] })),
-        api.get('/api/dashboards/distribuicao-categorias').catch(() => ({ data: [] })),
-        api.get(projecaoUrl).catch(() => ({ data: [] }))
+        api.get(fluxoUrl).catch(err => {
+          console.error('Erro fluxo:', err);
+          return { data: [] };
+        }),
+        api.get('/api/dashboards/distribuicao-categorias').catch(err => {
+          console.error('Erro distribuicao:', err);
+          return { data: [] };
+        }),
+        api.get(projecaoUrl).catch(err => {
+          console.error('Erro projecao:', err);
+          return { data: [] };
+        })
       ]);
       
       setFluxoCaixa(Array.isArray(fluxoRes.data) ? fluxoRes.data : []);

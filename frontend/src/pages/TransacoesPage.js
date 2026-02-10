@@ -49,14 +49,23 @@ export const TransacoesPage = () => {
       if (filtros.tipo) url += `&tipo=${filtros.tipo}`;
       
       const [transacoesRes, caixinhasRes, categoriasRes] = await Promise.all([
-        api.get(url).catch(() => ({ data: [] })),
-        api.get(`/api/caixinhas?mes=${mesAtual}`).catch(() => ({ data: [] })),
-        api.get('/api/categorias').catch(() => ({ data: [] }))
+        api.get(url).catch(err => {
+          console.error('Erro transacoes:', err);
+          return { data: [] };
+        }),
+        api.get(`/api/caixinhas?mes=${mesAtual}`).catch(err => {
+          console.error('Erro caixinhas:', err);
+          return { data: [] };
+        }),
+        api.get('/api/categorias').catch(err => {
+          console.error('Erro categorias:', err);
+          return { data: [] };
+        })
       ]);
       
-      setTransacoes(Array.isArray(transacoesRes.data) ? transacoesRes.data : []);
-      setCaixinhas(Array.isArray(caixinhasRes.data) ? caixinhasRes.data : []);
-      setCategorias(Array.isArray(categoriasRes.data) ? categoriasRes.data : []);
+      setTransacoes(Array.isArray(transacoesRes?.data) ? transacoesRes.data : []);
+      setCaixinhas(Array.isArray(caixinhasRes?.data) ? caixinhasRes.data : []);
+      setCategorias(Array.isArray(categoriasRes?.data) ? categoriasRes.data : []);
     } catch (error) {
       console.error('Erro ao carregar dados:', error);
       setTransacoes([]);

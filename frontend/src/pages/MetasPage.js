@@ -49,16 +49,25 @@ export const MetasPage = () => {
       const mesAtual = new Date().toISOString().slice(0, 7);
       
       const [metasRes, caixinhasRes, resumoRes] = await Promise.all([
-        api.get('/api/metas').catch(() => ({ data: [] })),
-        api.get(`/api/caixinhas?mes=${mesAtual}`).catch(() => ({ data: [] })),
-        api.get('/api/metas/estatisticas/resumo').catch(() => ({ 
-          data: { ativas: 0, concluidas: 0, total_alvo_ativas: 0, total_poupado_ativas: 0 } 
-        }))
+        api.get('/api/metas').catch(err => {
+          console.error('Erro metas:', err);
+          return { data: [] };
+        }),
+        api.get(`/api/caixinhas?mes=${mesAtual}`).catch(err => {
+          console.error('Erro caixinhas:', err);
+          return { data: [] };
+        }),
+        api.get('/api/metas/estatisticas/resumo').catch(err => {
+          console.error('Erro resumo metas:', err);
+          return { 
+            data: { ativas: 0, concluidas: 0, total_alvo_ativas: 0, total_poupado_ativas: 0 } 
+          };
+        })
       ]);
       
-      setMetas(Array.isArray(metasRes.data) ? metasRes.data : []);
-      setCaixinhas(Array.isArray(caixinhasRes.data) ? caixinhasRes.data : []);
-      setResumo(resumoRes.data || { ativas: 0, concluidas: 0, total_alvo_ativas: 0, total_poupado_ativas: 0 });
+      setMetas(Array.isArray(metasRes?.data) ? metasRes.data : []);
+      setCaixinhas(Array.isArray(caixinhasRes?.data) ? caixinhasRes.data : []);
+      setResumo(resumoRes?.data || { ativas: 0, concluidas: 0, total_alvo_ativas: 0, total_poupado_ativas: 0 });
     } catch (error) {
       console.error('Erro ao carregar metas:', error);
       setMetas([]);

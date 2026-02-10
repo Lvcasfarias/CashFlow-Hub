@@ -31,9 +31,12 @@ export const BalanceProvider = ({ children }) => {
     try {
       setLoading(true);
       const mesAtual = new Date().toISOString().slice(0, 7);
-      const response = await api.get(`/api/dashboards/resumo-geral?mes=${mesAtual}`);
+      const response = await api.get(`/api/dashboards/resumo-geral?mes=${mesAtual}`).catch(err => {
+        console.error('Erro ao buscar saldo:', err);
+        return { data: null };
+      });
       
-      if (response.data) {
+      if (response && response.data) {
         setBalance({
           saldo_consolidado: response.data.saldo_consolidado || 0,
           contas: response.data.contas || { saldo_total_contas: 0, total_contas: 0 },

@@ -149,13 +149,16 @@ router.delete('/:id', authMiddleware, async (req, res) => {
     try {
       await client.query('BEGIN');
 
-      // Desvincular transacoes (SET NULL devido ao ON DELETE SET NULL no schema)
+      // Verificar se o usuário quer deletar mesmo com transações (Simulado via backend por enquanto)
+      // O requisito pede Cascade ou Warning. Vamos garantir que delete tudo relacionado.
+      
+      // Deletar transações vinculadas (Cascade real)
       await client.query(
-        'UPDATE transacoes SET caixinha_id = NULL WHERE caixinha_id = $1',
+        'DELETE FROM transacoes WHERE caixinha_id = $1',
         [id]
       );
 
-      // Desvincular recorrencias
+      // Desvincular outros itens que podem ser mantidos sem caixinha
       await client.query(
         'UPDATE recorrencias SET caixinha_id = NULL WHERE caixinha_id = $1',
         [id]
