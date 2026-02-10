@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Layout } from '../components/Layout';
+import { useBalance } from '../context/BalanceContext';
 import api from '../lib/api';
 import { toast } from 'sonner';
-import { Plus, Settings, Trash2, DollarSign } from 'lucide-react';
+import { Plus, Settings, Trash2, DollarSign, AlertTriangle } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
@@ -10,10 +11,13 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Progress } from '../components/ui/progress';
 
 export const CaixinhasPage = () => {
+  const { refreshBalance } = useBalance();
   const [caixinhas, setCaixinhas] = useState([]);
   const [loading, setLoading] = useState(true);
   const [openConfig, setOpenConfig] = useState(false);
   const [openDistribuir, setOpenDistribuir] = useState(false);
+  const [openDeleteConfirm, setOpenDeleteConfirm] = useState(false);
+  const [caixinhaToDelete, setCaixinhaToDelete] = useState(null);
   const [configCaixinhas, setConfigCaixinhas] = useState([
     { nome: 'Investimentos', porcentagem: 30 },
     { nome: 'Conhecimento', porcentagem: 15 },
@@ -29,10 +33,11 @@ export const CaixinhasPage = () => {
     try {
       setLoading(true);
       const mesAtual = new Date().toISOString().slice(0, 7);
-      const response = await api.get(`/api/caixinhas?mes=${mesAtual}`);
-      setCaixinhas(response.data);
+      const response = await api.get(`/api/caixinhas?mes=${mesAtual}`).catch(() => ({ data: [] }));
+      setCaixinhas(Array.isArray(response.data) ? response.data : []);
     } catch (error) {
-      toast.error('Erro ao carregar caixinhas');
+      console.error('Erro ao carregar caixinhas:', error);
+      setCaixinhas([]);
     } finally {
       setLoading(false);
     }
@@ -51,10 +56,12 @@ export const CaixinhasPage = () => {
         caixinhas: configCaixinhas,
         mesReferencia: new Date().toISOString().slice(0, 7),
       });
-      toast.success('Caixinhas configuradas com sucesso!');
+      toast.success('Caixinhas configuradas!');
       setOpenConfig(false);
       fetchCaixinhas();
+      refreshBalance();
     } catch (error) {
+      console.error('Erro ao configurar:', error);
       toast.error('Erro ao configurar caixinhas');
     }
   };
