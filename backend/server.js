@@ -38,6 +38,10 @@ app.use('/api/recorrencias', recorrenciasRoutes);
 app.use('/api/wishlist', wishlistRoutes);
 app.use('/api/dividas', dividasRoutes);
 app.use('/api/dashboards', dashboardsRoutes);
+app.use('/api/cartoes', cartoesRoutes);
+app.use('/api/metas', metasRoutes);
+app.use('/api/categorias', categoriasRoutes);
+app.use('/api/contas', contasRoutes);
 
 // Tratamento de erros global
 app.use((err, req, res, next) => {
