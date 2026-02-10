@@ -162,20 +162,20 @@ router.get('/resumo-geral', authMiddleware, async (req, res) => {
   try {
     const mes = req.query.mes || new Date().toISOString().slice(0, 7);
 
-    const [transacoes, caixinhas, dividas, recorrencias] = await Promise.all([
+    const [transacoes, caixinhas, dividas, recorrencias, contas, cartoes, metas] = await Promise.all([
       pool.query(
         `SELECT 
-           SUM(CASE WHEN tipo = 'entrada' THEN valor ELSE 0 END) as total_entradas,
-           SUM(CASE WHEN tipo = 'saida' THEN valor ELSE 0 END) as total_saidas
+           COALESCE(SUM(CASE WHEN tipo = 'entrada' THEN valor ELSE 0 END), 0) as total_entradas,
+           COALESCE(SUM(CASE WHEN tipo = 'saida' THEN valor ELSE 0 END), 0) as total_saidas
          FROM transacoes
          WHERE user_id = $1 AND TO_CHAR(data, 'YYYY-MM') = $2`,
         [req.userId, mes]
       ),
       pool.query(
         `SELECT 
-           SUM(valor_alocado) as total_alocado,
-           SUM(valor_gasto) as total_gasto,
-           SUM(saldo_disponivel) as total_disponivel
+           COALESCE(SUM(valor_alocado), 0) as total_alocado,
+           COALESCE(SUM(valor_gasto), 0) as total_gasto,
+           COALESCE(SUM(saldo_disponivel), 0) as total_disponivel
          FROM caixinhas
          WHERE user_id = $1 AND mes_referencia = $2`,
         [req.userId, mes]
@@ -183,7 +183,7 @@ router.get('/resumo-geral', authMiddleware, async (req, res) => {
       pool.query(
         `SELECT 
            COUNT(*) as total_dividas,
-           SUM(CASE WHEN status != 'quitado' THEN valor_atual ELSE 0 END) as total_devido
+           COALESCE(SUM(CASE WHEN status != 'quitado' THEN valor_atual ELSE 0 END), 0) as total_devido
          FROM dividas
          WHERE user_id = $1`,
         [req.userId]
@@ -191,18 +191,54 @@ router.get('/resumo-geral', authMiddleware, async (req, res) => {
       pool.query(
         `SELECT 
            COUNT(*) as total_fixas,
-           SUM(CASE WHEN tipo = 'saida' THEN valor ELSE 0 END) as total_saidas_fixas
+           COALESCE(SUM(CASE WHEN tipo = 'saida' THEN valor ELSE 0 END), 0) as total_saidas_fixas
          FROM recorrencias
          WHERE user_id = $1 AND ativo = true`,
         [req.userId]
+      ),
+      pool.query(
+        `SELECT 
+           COALESCE(SUM(saldo_atual), 0) as saldo_total_contas,
+           COUNT(*) as total_contas
+         FROM contas
+         WHERE user_id = $1 AND ativo = true`,
+        [req.userId]
+      ),
+      pool.query(
+        `SELECT 
+           COALESCE(SUM(limite), 0) as limite_total,
+           COALESCE(SUM(limite - limite_disponivel), 0) as total_utilizado_cartoes
+         FROM cartoes
+         WHERE user_id = $1 AND ativo = true`,
+        [req.userId]
+      ),
+      pool.query(
+        `SELECT 
+           COUNT(CASE WHEN status = 'ativa' THEN 1 END) as metas_ativas,
+           COALESCE(SUM(CASE WHEN status = 'ativa' THEN valor_atual ELSE 0 END), 0) as total_poupado_metas
+         FROM metas
+         WHERE user_id = $1`,
+        [req.userId]
       )
     ]);
+
+    // Calcular saldo consolidado
+    const saldoContas = parseFloat(contas.rows[0].saldo_total_contas) || 0;
+    const caixinhasDisponivel = parseFloat(caixinhas.rows[0].total_disponivel) || 0;
+    const dividasDevido = parseFloat(dividas.rows[0].total_devido) || 0;
+    const utilizadoCartoes = parseFloat(cartoes.rows[0].total_utilizado_cartoes) || 0;
+    
+    const saldoConsolidado = saldoContas + caixinhasDisponivel - dividasDevido - utilizadoCartoes;
 
     res.json({
       transacoes: transacoes.rows[0],
       caixinhas: caixinhas.rows[0],
       dividas: dividas.rows[0],
-      recorrencias: recorrencias.rows[0]
+      recorrencias: recorrencias.rows[0],
+      contas: contas.rows[0],
+      cartoes: cartoes.rows[0],
+      metas: metas.rows[0],
+      saldo_consolidado: saldoConsolidado
     });
   } catch (error) {
     console.error('Erro ao obter resumo geral:', error);
