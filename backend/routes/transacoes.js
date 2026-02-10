@@ -135,6 +135,112 @@ router.post('/',
   }
 );
 
+// Editar transação
+router.put('/:id',
+  authMiddleware,
+  [
+    body('tipo').optional().isIn(['entrada', 'saida']),
+    body('valor').optional().isFloat({ min: 0.01 }),
+    body('data').optional().isDate()
+  ],
+  async (req, res) => {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        return res.status(400).json({ errors: errors.array() });
+      }
+
+      const { id } = req.params;
+      const { tipo, valor, descricao, caixinhaId, data, categoriaId, metodoPagamento, contaId, cartaoId } = req.body;
+
+      const client = await pool.connect();
+
+      try {
+        await client.query('BEGIN');
+
+        // Buscar transação original
+        const transacaoOriginal = await client.query(
+          'SELECT * FROM transacoes WHERE id = $1 AND user_id = $2',
+          [id, req.userId]
+        );
+
+        if (transacaoOriginal.rows.length === 0) {
+          await client.query('ROLLBACK');
+          return res.status(404).json({ error: 'Transação não encontrada' });
+        }
+
+        const original = transacaoOriginal.rows[0];
+
+        // Reverter o efeito da transação original na caixinha
+        if (original.tipo === 'saida' && original.caixinha_id) {
+          await client.query(
+            `UPDATE caixinhas 
+             SET valor_gasto = valor_gasto - $1,
+                 saldo_disponivel = valor_alocado - (valor_gasto - $1)
+             WHERE id = $2`,
+            [original.valor, original.caixinha_id]
+          );
+        }
+
+        // Atualizar transação
+        const novoTipo = tipo || original.tipo;
+        const novoValor = valor !== undefined ? valor : original.valor;
+        const novaCaixinhaId = caixinhaId !== undefined ? caixinhaId : original.caixinha_id;
+
+        const updateResult = await client.query(
+          `UPDATE transacoes 
+           SET tipo = $1,
+               valor = $2,
+               descricao = COALESCE($3, descricao),
+               caixinha_id = $4,
+               data = COALESCE($5, data),
+               categoria_id = $6,
+               metodo_pagamento = COALESCE($7, metodo_pagamento),
+               conta_id = $8,
+               cartao_id = $9
+           WHERE id = $10 AND user_id = $11
+           RETURNING *`,
+          [
+            novoTipo,
+            novoValor,
+            descricao,
+            novaCaixinhaId,
+            data,
+            categoriaId || original.categoria_id,
+            metodoPagamento,
+            contaId || original.conta_id,
+            cartaoId || original.cartao_id,
+            id,
+            req.userId
+          ]
+        );
+
+        // Aplicar novo efeito na caixinha
+        if (novoTipo === 'saida' && novaCaixinhaId) {
+          await client.query(
+            `UPDATE caixinhas 
+             SET valor_gasto = valor_gasto + $1,
+                 saldo_disponivel = valor_alocado - (valor_gasto + $1)
+             WHERE id = $2`,
+            [novoValor, novaCaixinhaId]
+          );
+        }
+
+        await client.query('COMMIT');
+        res.json(updateResult.rows[0]);
+      } catch (error) {
+        await client.query('ROLLBACK');
+        throw error;
+      } finally {
+        client.release();
+      }
+    } catch (error) {
+      console.error('Erro ao editar transação:', error);
+      res.status(500).json({ error: 'Erro ao editar transação' });
+    }
+  }
+);
+
 // Deletar transação
 router.delete('/:id', authMiddleware, async (req, res) => {
   try {
