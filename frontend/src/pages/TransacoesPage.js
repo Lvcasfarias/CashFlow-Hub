@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Layout } from '../components/Layout';
+import { useBalance } from '../context/BalanceContext';
 import api from '../lib/api';
 import { toast } from 'sonner';
 import { Plus, Trash2, Filter, Edit2, Download } from 'lucide-react';
@@ -10,6 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 
 export const TransacoesPage = () => {
+  const { refreshBalance } = useBalance();
   const [transacoes, setTransacoes] = useState([]);
   const [caixinhas, setCaixinhas] = useState([]);
   const [categorias, setCategorias] = useState([]);
@@ -47,15 +49,19 @@ export const TransacoesPage = () => {
       if (filtros.tipo) url += `&tipo=${filtros.tipo}`;
       
       const [transacoesRes, caixinhasRes, categoriasRes] = await Promise.all([
-        api.get(url),
-        api.get(`/api/caixinhas?mes=${mesAtual}`),
-        api.get('/api/categorias')
+        api.get(url).catch(() => ({ data: [] })),
+        api.get(`/api/caixinhas?mes=${mesAtual}`).catch(() => ({ data: [] })),
+        api.get('/api/categorias').catch(() => ({ data: [] }))
       ]);
-      setTransacoes(transacoesRes.data || []);
-      setCaixinhas(caixinhasRes.data || []);
-      setCategorias(categoriasRes.data || []);
+      
+      setTransacoes(Array.isArray(transacoesRes.data) ? transacoesRes.data : []);
+      setCaixinhas(Array.isArray(caixinhasRes.data) ? caixinhasRes.data : []);
+      setCategorias(Array.isArray(categoriasRes.data) ? categoriasRes.data : []);
     } catch (error) {
-      toast.error('Erro ao carregar dados');
+      console.error('Erro ao carregar dados:', error);
+      setTransacoes([]);
+      setCaixinhas([]);
+      setCategorias([]);
     } finally {
       setLoading(false);
     }
@@ -96,7 +102,9 @@ export const TransacoesPage = () => {
       setOpenDialog(false);
       resetForm();
       fetchData();
+      refreshBalance();
     } catch (error) {
+      console.error('Erro ao salvar:', error);
       toast.error('Erro ao salvar transacao');
     }
   };
@@ -104,8 +112,8 @@ export const TransacoesPage = () => {
   const handleEdit = (transacao) => {
     setEditingTransacao(transacao);
     setFormData({
-      tipo: transacao.tipo,
-      valor: transacao.valor,
+      tipo: transacao.tipo || 'saida',
+      valor: transacao.valor || '',
       descricao: transacao.descricao || '',
       caixinhaId: transacao.caixinha_id ? String(transacao.caixinha_id) : '',
       categoriaId: transacao.categoria_id ? String(transacao.categoria_id) : '',
@@ -122,7 +130,9 @@ export const TransacoesPage = () => {
       await api.delete(`/api/transacoes/${id}`);
       toast.success('Transacao excluida!');
       fetchData();
+      refreshBalance();
     } catch (error) {
+      console.error('Erro ao excluir:', error);
       toast.error('Erro ao excluir transacao');
     }
   };
@@ -141,7 +151,7 @@ export const TransacoesPage = () => {
   };
 
   const exportToCSV = () => {
-    if (transacoes.length === 0) {
+    if (!transacoes || transacoes.length === 0) {
       toast.error('Nenhuma transacao para exportar');
       return;
     }
@@ -149,13 +159,13 @@ export const TransacoesPage = () => {
     const csvContent = [
       headers.join(','),
       ...transacoes.map(t => [
-        new Date(t.data).toLocaleDateString('pt-BR'),
-        t.tipo,
-        `"${t.descricao || ''}"`,
+        t.data ? new Date(t.data).toLocaleDateString('pt-BR') : '',
+        t.tipo || '',
+        `"${(t.descricao || '').replace(/"/g, '""')}"`,
         t.categoria_nome || '',
         t.nome_caixinha || '',
         t.metodo_pagamento || '',
-        t.valor
+        t.valor || 0
       ].join(','))
     ].join('\n');
     
@@ -171,11 +181,16 @@ export const TransacoesPage = () => {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
       currency: 'BRL',
-    }).format(value);
+    }).format(value || 0);
   };
 
   const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleDateString('pt-BR');
+    if (!dateString) return '-';
+    try {
+      return new Date(dateString).toLocaleDateString('pt-BR');
+    } catch {
+      return '-';
+    }
   };
 
   const getMetodoPagamentoLabel = (metodo) => {
@@ -187,8 +202,10 @@ export const TransacoesPage = () => {
       transferencia: 'Transferencia',
       boleto: 'Boleto'
     };
-    return labels[metodo] || metodo;
+    return labels[metodo] || metodo || '-';
   };
+
+  const categoriasDisponiveis = categorias.filter(c => c.tipo === formData.tipo);
 
   if (loading) {
     return (
@@ -211,13 +228,13 @@ export const TransacoesPage = () => {
           <div className="flex gap-2">
             <Button variant="outline" onClick={exportToCSV} data-testid="export-csv-btn">
               <Download className="w-4 h-4 mr-2" />
-              Exportar CSV
+              CSV
             </Button>
             <Dialog open={openDialog} onOpenChange={(open) => { setOpenDialog(open); if (!open) resetForm(); }}>
               <DialogTrigger asChild>
                 <Button data-testid="add-transacao-btn">
                   <Plus className="w-4 h-4 mr-2" />
-                  Nova Transacao
+                  Nova
                 </Button>
               </DialogTrigger>
               <DialogContent className="max-w-md">
@@ -229,7 +246,7 @@ export const TransacoesPage = () => {
                     <Label>Tipo</Label>
                     <Select
                       value={formData.tipo}
-                      onValueChange={(value) => setFormData({ ...formData, tipo: value })}
+                      onValueChange={(value) => setFormData({ ...formData, tipo: value, categoriaId: '' })}
                     >
                       <SelectTrigger data-testid="tipo-select">
                         <SelectValue />
@@ -275,7 +292,8 @@ export const TransacoesPage = () => {
                         <SelectValue placeholder="Selecione uma categoria" />
                       </SelectTrigger>
                       <SelectContent>
-                        {categorias.filter(c => c.tipo === formData.tipo).map((cat) => (
+                        <SelectItem value="">Nenhuma</SelectItem>
+                        {categoriasDisponiveis.map((cat) => (
                           <SelectItem key={cat.id} value={String(cat.id)}>
                             {cat.nome}
                           </SelectItem>
@@ -317,7 +335,7 @@ export const TransacoesPage = () => {
                         <SelectContent>
                           {caixinhas.map((caixinha) => (
                             <SelectItem key={caixinha.id} value={String(caixinha.id)}>
-                              {caixinha.nome_caixinha}
+                              {caixinha.nome_caixinha} ({formatCurrency(caixinha.saldo_disponivel)})
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -337,7 +355,7 @@ export const TransacoesPage = () => {
                   </div>
 
                   <Button type="submit" className="w-full" data-testid="submit-transacao-btn">
-                    {editingTransacao ? 'Salvar Alteracoes' : 'Cadastrar Transacao'}
+                    {editingTransacao ? 'Salvar' : 'Cadastrar'}
                   </Button>
                 </form>
               </DialogContent>
@@ -386,7 +404,7 @@ export const TransacoesPage = () => {
           </div>
         </div>
 
-        {transacoes.length === 0 ? (
+        {!transacoes || transacoes.length === 0 ? (
           <div className="bg-card border border-border/50 rounded-xl p-12 text-center">
             <Plus className="w-16 h-16 mx-auto text-muted-foreground mb-4" />
             <h3 className="text-xl font-semibold mb-2">Nenhuma transacao encontrada</h3>
@@ -424,14 +442,17 @@ export const TransacoesPage = () => {
                       <td className="p-4 font-mono text-sm">{formatDate(transacao.data)}</td>
                       <td className="p-4">{transacao.descricao || 'Sem descricao'}</td>
                       <td className="p-4 text-sm">
-                        {transacao.categoria_nome && (
+                        {transacao.categoria_nome ? (
                           <span 
                             className="px-2 py-1 rounded-full text-xs"
-                            style={{ backgroundColor: `${transacao.categoria_cor}20`, color: transacao.categoria_cor }}
+                            style={{ 
+                              backgroundColor: transacao.categoria_cor ? `${transacao.categoria_cor}20` : '#6B728020', 
+                              color: transacao.categoria_cor || '#6B7280' 
+                            }}
                           >
                             {transacao.categoria_nome}
                           </span>
-                        )}
+                        ) : '-'}
                       </td>
                       <td className="p-4 text-sm text-muted-foreground">
                         {transacao.nome_caixinha || '-'}
