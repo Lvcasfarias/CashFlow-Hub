@@ -4,23 +4,43 @@ const authMiddleware = require('../middleware/auth');
 
 const router = express.Router();
 
-// Fluxo de caixa (últimos 6 meses)
+// Fluxo de caixa (periodo flexivel)
 router.get('/fluxo-caixa', authMiddleware, async (req, res) => {
   try {
-    const result = await pool.query(
-      `SELECT 
+    const meses = parseInt(req.query.meses) || 6;
+    const { dataInicio, dataFim } = req.query;
+    
+    let query;
+    let params;
+    
+    if (dataInicio && dataFim) {
+      query = `SELECT 
          TO_CHAR(data, 'YYYY-MM') as mes,
-         SUM(CASE WHEN tipo = 'entrada' THEN valor ELSE 0 END) as entradas,
-         SUM(CASE WHEN tipo = 'saida' THEN valor ELSE 0 END) as saidas
+         COALESCE(SUM(CASE WHEN tipo = 'entrada' THEN valor ELSE 0 END), 0) as entradas,
+         COALESCE(SUM(CASE WHEN tipo = 'saida' THEN valor ELSE 0 END), 0) as saidas,
+         COALESCE(SUM(CASE WHEN tipo = 'entrada' THEN valor ELSE -valor END), 0) as saldo
        FROM transacoes
        WHERE user_id = $1 
-         AND data >= CURRENT_DATE - INTERVAL '6 months'
+         AND data >= $2 AND data <= $3
        GROUP BY TO_CHAR(data, 'YYYY-MM')
-       ORDER BY mes ASC`,
-      [req.userId]
-    );
+       ORDER BY mes ASC`;
+      params = [req.userId, dataInicio, dataFim];
+    } else {
+      query = `SELECT 
+         TO_CHAR(data, 'YYYY-MM') as mes,
+         COALESCE(SUM(CASE WHEN tipo = 'entrada' THEN valor ELSE 0 END), 0) as entradas,
+         COALESCE(SUM(CASE WHEN tipo = 'saida' THEN valor ELSE 0 END), 0) as saidas,
+         COALESCE(SUM(CASE WHEN tipo = 'entrada' THEN valor ELSE -valor END), 0) as saldo
+       FROM transacoes
+       WHERE user_id = $1 
+         AND data >= CURRENT_DATE - INTERVAL '${meses} months'
+       GROUP BY TO_CHAR(data, 'YYYY-MM')
+       ORDER BY mes ASC`;
+      params = [req.userId];
+    }
 
-    res.json(result.rows);
+    const result = await pool.query(query, params);
+    res.json(result.rows || []);
   } catch (error) {
     console.error('Erro ao obter fluxo de caixa:', error);
     res.status(500).json({ error: 'Erro ao obter fluxo de caixa' });
