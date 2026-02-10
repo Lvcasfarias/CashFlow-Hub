@@ -244,18 +244,26 @@ router.get('/estatisticas/resumo', authMiddleware, async (req, res) => {
   try {
     const result = await pool.query(
       `SELECT 
-         COUNT(*) as total_dividas,
-         COUNT(CASE WHEN status = 'pendente' THEN 1 END) as pendentes,
-         COUNT(CASE WHEN status = 'negociando' THEN 1 END) as negociando,
-         COUNT(CASE WHEN status = 'quitado' THEN 1 END) as quitadas,
-         SUM(CASE WHEN status != 'quitado' THEN valor_atual ELSE 0 END) as total_devido,
-         SUM(valor_original) as total_original
+         COALESCE(COUNT(*), 0) as total_dividas,
+         COALESCE(COUNT(CASE WHEN status = 'pendente' THEN 1 END), 0) as pendentes,
+         COALESCE(COUNT(CASE WHEN status = 'negociando' THEN 1 END), 0) as negociando,
+         COALESCE(COUNT(CASE WHEN status = 'quitado' THEN 1 END), 0) as quitadas,
+         COALESCE(SUM(CASE WHEN status != 'quitado' THEN valor_atual ELSE 0 END), 0) as total_devido,
+         COALESCE(SUM(valor_original), 0) as total_original
        FROM dividas
        WHERE user_id = $1`,
       [req.userId]
     );
 
-    res.json(result.rows[0]);
+    const stats = result.rows[0];
+    res.json({
+      total_dividas: parseInt(stats.total_dividas) || 0,
+      pendentes: parseInt(stats.pendentes) || 0,
+      negociando: parseInt(stats.negociando) || 0,
+      quitadas: parseInt(stats.quitadas) || 0,
+      total_devido: parseFloat(stats.total_devido) || 0,
+      total_original: parseFloat(stats.total_original) || 0
+    });
   } catch (error) {
     console.error('Erro ao obter estatísticas:', error);
     res.status(500).json({ error: 'Erro ao obter estatísticas' });
