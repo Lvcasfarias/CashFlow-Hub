@@ -12,9 +12,17 @@ router.get('/', authMiddleware, async (req, res) => {
     
     let query = `
       SELECT t.id, t.tipo, t.valor, t.descricao, t.data, t.created_at,
-             c.nome_caixinha
+             t.categoria_id, t.metodo_pagamento, t.conta_id, t.cartao_id,
+             t.parcela_numero, t.total_parcelas,
+             c.nome_caixinha,
+             cat.nome as categoria_nome, cat.icone as categoria_icone, cat.cor as categoria_cor,
+             con.nome as conta_nome,
+             car.nome as cartao_nome
       FROM transacoes t
       LEFT JOIN caixinhas c ON t.caixinha_id = c.id
+      LEFT JOIN categorias cat ON t.categoria_id = cat.id
+      LEFT JOIN contas con ON t.conta_id = con.id
+      LEFT JOIN cartoes car ON t.cartao_id = car.id
       WHERE t.user_id = $1
     `;
     
