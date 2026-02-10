@@ -2,7 +2,7 @@ import React from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
-import { Home, Wallet, ArrowLeftRight, Calendar, Heart, BarChart3, LogOut, Moon, Sun, TrendingDown } from 'lucide-react';
+import { Home, Wallet, ArrowLeftRight, Calendar, Heart, BarChart3, LogOut, Moon, Sun, TrendingDown, CreditCard, Target } from 'lucide-react';
 import { Button } from './ui/button';
 
 export const Layout = ({ children }) => {
@@ -14,11 +14,13 @@ export const Layout = ({ children }) => {
   const navItems = [
     { path: '/dashboard', icon: Home, label: 'Dashboard' },
     { path: '/caixinhas', icon: Wallet, label: 'Caixinhas' },
-    { path: '/transacoes', icon: ArrowLeftRight, label: 'Transações' },
-    { path: '/recorrencias', icon: Calendar, label: 'Recorrências' },
-    { path: '/dividas', icon: TrendingDown, label: 'Dívidas' },
+    { path: '/transacoes', icon: ArrowLeftRight, label: 'Transacoes' },
+    { path: '/recorrencias', icon: Calendar, label: 'Recorrencias' },
+    { path: '/cartoes', icon: CreditCard, label: 'Cartoes' },
+    { path: '/dividas', icon: TrendingDown, label: 'Dividas' },
+    { path: '/metas', icon: Target, label: 'Metas' },
     { path: '/wishlist', icon: Heart, label: 'Wishlist' },
-    { path: '/relatorios', icon: BarChart3, label: 'Relatórios' },
+    { path: '/relatorios', icon: BarChart3, label: 'Relatorios' },
   ];
 
   const handleLogout = () => {
@@ -34,7 +36,7 @@ export const Layout = ({ children }) => {
           <p className="text-sm text-muted-foreground mt-1">{user?.name}</p>
         </div>
 
-        <nav className="flex-1 p-4 space-y-2">
+        <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
           {navItems.map((item) => {
             const Icon = item.icon;
             const isActive = location.pathname === item.path;
@@ -43,14 +45,14 @@ export const Layout = ({ children }) => {
                 key={item.path}
                 to={item.path}
                 data-testid={`nav-${item.label.toLowerCase()}`}
-                className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-300 ${
+                className={`flex items-center gap-3 px-4 py-2.5 rounded-lg transition-all duration-300 ${
                   isActive
                     ? 'bg-primary text-primary-foreground shadow-[0_0_20px_rgba(37,99,235,0.3)]'
                     : 'hover:bg-accent hover:text-accent-foreground'
                 }`}
               >
                 <Icon className="w-5 h-5" />
-                <span className="font-medium">{item.label}</span>
+                <span className="font-medium text-sm">{item.label}</span>
               </Link>
             );
           })}
