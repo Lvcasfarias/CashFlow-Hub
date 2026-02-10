@@ -47,32 +47,27 @@ router.get('/fluxo-caixa', authMiddleware, async (req, res) => {
   }
 });
 
-// Distribuição por categorias (caixinhas)
+// Distribuicao por categorias (caixinhas)
 router.get('/distribuicao-categorias', authMiddleware, async (req, res) => {
   try {
     const mes = req.query.mes || new Date().toISOString().slice(0, 7);
     
     const result = await pool.query(
       `SELECT 
-         c.nome_caixinha as categoria,
-         c.porcentagem_alvo as planejado,
-         CASE 
-           WHEN SUM(c.valor_alocado) > 0 
-           THEN (SUM(c.valor_gasto) / SUM(c.valor_alocado) * 100)
-           ELSE 0 
-         END as realizado,
-         SUM(c.valor_gasto) as valor_gasto
+         c.nome_caixinha as nome,
+         COALESCE(SUM(c.valor_gasto), 0) as valor
        FROM caixinhas c
        WHERE c.user_id = $1 AND c.mes_referencia = $2
-       GROUP BY c.nome_caixinha, c.porcentagem_alvo
-       ORDER BY valor_gasto DESC`,
+       GROUP BY c.nome_caixinha
+       HAVING COALESCE(SUM(c.valor_gasto), 0) > 0
+       ORDER BY valor DESC`,
       [req.userId, mes]
     );
 
-    res.json(result.rows);
+    res.json(result.rows || []);
   } catch (error) {
-    console.error('Erro ao obter distribuição:', error);
-    res.status(500).json({ error: 'Erro ao obter distribuição' });
+    console.error('Erro ao obter distribuicao:', error);
+    res.status(500).json({ error: 'Erro ao obter distribuicao' });
   }
 });
 
