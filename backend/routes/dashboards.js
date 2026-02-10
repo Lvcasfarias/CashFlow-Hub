@@ -106,18 +106,19 @@ router.get('/evolucao-dividas', authMiddleware, async (req, res) => {
   }
 });
 
-// Projeção de 6 meses
+// Projecao futura (periodo flexivel)
 router.get('/projecao-futura', authMiddleware, async (req, res) => {
   try {
+    const numMeses = parseInt(req.query.meses) || 6;
     const meses = [];
     const hoje = new Date();
     
-    for (let i = 0; i < 6; i++) {
+    for (let i = 0; i < numMeses; i++) {
       const data = new Date(hoje.getFullYear(), hoje.getMonth() + i, 1);
       meses.push(data.toISOString().slice(0, 7));
     }
 
-    // Obter recorrências ativas
+    // Obter recorrencias ativas
     const recorrencias = await pool.query(
       `SELECT tipo, valor FROM recorrencias 
        WHERE user_id = $1 AND ativo = true`,
@@ -126,34 +127,37 @@ router.get('/projecao-futura', authMiddleware, async (req, res) => {
 
     // Obter parceladas ativas
     const parceladas = await pool.query(
-      `SELECT valor_parcela, num_parcelas, parcelas_pagas 
+      `SELECT valor_parcela, num_parcelas, COALESCE(parcelas_pagas, 0) as parcelas_pagas 
        FROM parceladas 
-       WHERE user_id = $1 AND ativo = true 
-         AND parcelas_pagas < num_parcelas`,
+       WHERE user_id = $1 AND ativo = true`,
       [req.userId]
     );
 
-    // Calcular projeção
+    // Calcular projecao
     const projecao = meses.map((mes, index) => {
       let entradasPrevistas = 0;
       let saidasPrevistas = 0;
 
-      // Adicionar recorrências
-      recorrencias.rows.forEach(rec => {
-        if (rec.tipo === 'entrada') {
-          entradasPrevistas += parseFloat(rec.valor);
-        } else {
-          saidasPrevistas += parseFloat(rec.valor);
-        }
-      });
+      // Adicionar recorrencias
+      if (recorrencias.rows) {
+        recorrencias.rows.forEach(rec => {
+          if (rec.tipo === 'entrada') {
+            entradasPrevistas += parseFloat(rec.valor) || 0;
+          } else {
+            saidasPrevistas += parseFloat(rec.valor) || 0;
+          }
+        });
+      }
 
       // Adicionar parcelas
-      parceladas.rows.forEach(parc => {
-        const parcelasRestantes = parc.num_parcelas - parc.parcelas_pagas;
-        if (index < parcelasRestantes) {
-          saidasPrevistas += parseFloat(parc.valor_parcela);
-        }
-      });
+      if (parceladas.rows) {
+        parceladas.rows.forEach(parc => {
+          const parcelasRestantes = (parc.num_parcelas || 0) - (parc.parcelas_pagas || 0);
+          if (index < parcelasRestantes) {
+            saidasPrevistas += parseFloat(parc.valor_parcela) || 0;
+          }
+        });
+      }
 
       const saldoProjetado = entradasPrevistas - saidasPrevistas;
 
@@ -167,8 +171,8 @@ router.get('/projecao-futura', authMiddleware, async (req, res) => {
 
     res.json(projecao);
   } catch (error) {
-    console.error('Erro ao calcular projeção:', error);
-    res.status(500).json({ error: 'Erro ao calcular projeção' });
+    console.error('Erro ao calcular projecao:', error);
+    res.status(500).json({ error: 'Erro ao calcular projecao' });
   }
 });
 
