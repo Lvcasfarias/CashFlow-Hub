@@ -2,12 +2,14 @@ import React from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
-import { Home, Wallet, ArrowLeftRight, Calendar, Heart, BarChart3, LogOut, Moon, Sun, TrendingDown, CreditCard, Target } from 'lucide-react';
+import { useBalance } from '../context/BalanceContext';
+import { Home, Wallet, ArrowLeftRight, Calendar, Heart, BarChart3, LogOut, Moon, Sun, TrendingDown, CreditCard, Target, PiggyBank } from 'lucide-react';
 import { Button } from './ui/button';
 
 export const Layout = ({ children }) => {
   const { user, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
+  const { balance } = useBalance();
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -28,12 +30,34 @@ export const Layout = ({ children }) => {
     navigate('/login');
   };
 
+  const formatCurrency = (value) => {
+    return new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'BRL',
+    }).format(value || 0);
+  };
+
+  const saldoConsolidado = balance?.saldo_consolidado || 0;
+
   return (
     <div className="flex h-screen bg-background">
       <aside className="hidden md:flex md:flex-col w-64 border-r border-border/40 bg-card/50 backdrop-blur-xl">
         <div className="p-6 border-b border-border/40">
           <h1 className="text-2xl font-bold tracking-tight">CashFlow Hub</h1>
           <p className="text-sm text-muted-foreground mt-1">{user?.name}</p>
+        </div>
+
+        {/* Saldo Consolidado Fixo no Sidebar */}
+        <div className="p-4 border-b border-border/40">
+          <div className="bg-gradient-to-r from-primary/20 to-primary/5 rounded-lg p-4">
+            <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
+              <PiggyBank className="w-4 h-4" />
+              <span>Saldo Consolidado</span>
+            </div>
+            <p className={`text-xl font-bold font-mono ${saldoConsolidado >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+              {formatCurrency(saldoConsolidado)}
+            </p>
+          </div>
         </div>
 
         <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
@@ -81,6 +105,21 @@ export const Layout = ({ children }) => {
       </aside>
 
       <main className="flex-1 overflow-y-auto pb-20 md:pb-0">
+        {/* Header Mobile com Saldo */}
+        <div className="md:hidden sticky top-0 z-40 bg-background/90 backdrop-blur-lg border-b border-border/40 p-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs text-muted-foreground">Saldo Consolidado</p>
+              <p className={`text-lg font-bold font-mono ${saldoConsolidado >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                {formatCurrency(saldoConsolidado)}
+              </p>
+            </div>
+            <Button variant="ghost" size="icon" onClick={toggleTheme}>
+              {theme === 'dark' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+            </Button>
+          </div>
+        </div>
+
         <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 py-8">
           {children}
         </div>
