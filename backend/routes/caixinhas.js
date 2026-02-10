@@ -116,7 +116,7 @@ router.post('/distribuir', authMiddleware, async (req, res) => {
         [req.userId, mes]
       );
 
-      res.json({ message: 'Valor distribuído com sucesso', caixinhas: updatedResult.rows });
+      res.json({ message: 'Valor distribuido com sucesso', caixinhas: updatedResult.rows });
     } catch (error) {
       await client.query('ROLLBACK');
       throw error;
@@ -126,6 +126,77 @@ router.post('/distribuir', authMiddleware, async (req, res) => {
   } catch (error) {
     console.error('Erro ao distribuir valor:', error);
     res.status(500).json({ error: 'Erro ao distribuir valor' });
+  }
+});
+
+// Deletar caixinha (transacoes vinculadas serao desvinculadas)
+router.delete('/:id', authMiddleware, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Verificar se caixinha pertence ao usuario
+    const caixinhaCheck = await pool.query(
+      'SELECT id FROM caixinhas WHERE id = $1 AND user_id = $2',
+      [id, req.userId]
+    );
+
+    if (caixinhaCheck.rows.length === 0) {
+      return res.status(404).json({ error: 'Caixinha nao encontrada' });
+    }
+
+    const client = await pool.connect();
+
+    try {
+      await client.query('BEGIN');
+
+      // Desvincular transacoes (SET NULL devido ao ON DELETE SET NULL no schema)
+      await client.query(
+        'UPDATE transacoes SET caixinha_id = NULL WHERE caixinha_id = $1',
+        [id]
+      );
+
+      // Desvincular recorrencias
+      await client.query(
+        'UPDATE recorrencias SET caixinha_id = NULL WHERE caixinha_id = $1',
+        [id]
+      );
+
+      // Desvincular parceladas
+      await client.query(
+        'UPDATE parceladas SET caixinha_id = NULL WHERE caixinha_id = $1',
+        [id]
+      );
+
+      // Desvincular metas
+      await client.query(
+        'UPDATE metas SET caixinha_id = NULL WHERE caixinha_id = $1',
+        [id]
+      );
+
+      // Desvincular wishlist
+      await client.query(
+        'UPDATE wishlist SET caixinha_id = NULL WHERE caixinha_id = $1',
+        [id]
+      );
+
+      // Deletar a caixinha
+      await client.query(
+        'DELETE FROM caixinhas WHERE id = $1',
+        [id]
+      );
+
+      await client.query('COMMIT');
+
+      res.json({ message: 'Caixinha excluida. Transacoes foram desvinculadas.' });
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
+  } catch (error) {
+    console.error('Erro ao deletar caixinha:', error);
+    res.status(500).json({ error: 'Erro ao deletar caixinha' });
   }
 });
 
