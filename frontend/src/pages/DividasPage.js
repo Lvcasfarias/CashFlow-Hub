@@ -42,15 +42,18 @@ export const DividasPage = () => {
       setLoading(true);
       const mesAtual = new Date().toISOString().slice(0, 7);
       const [dividasRes, caixinhasRes, statsRes] = await Promise.all([
-        api.get('/api/dividas'),
-        api.get(`/api/caixinhas?mes=${mesAtual}`),
-        api.get('/api/dividas/estatisticas/resumo')
+        api.get('/api/dividas').catch(() => ({ data: [] })),
+        api.get(`/api/caixinhas?mes=${mesAtual}`).catch(() => ({ data: [] })),
+        api.get('/api/dividas/estatisticas/resumo').catch(() => ({ data: { total_dividas: 0, pendentes: 0, total_devido: 0 } }))
       ]);
-      setDividas(dividasRes.data);
-      setCaixinhas(caixinhasRes.data);
+      setDividas(dividasRes.data || []);
+      setCaixinhas(caixinhasRes.data || []);
       setStats(statsRes.data);
     } catch (error) {
-      toast.error('Erro ao carregar dívidas');
+      console.error('Erro ao carregar dividas:', error);
+      setDividas([]);
+      setCaixinhas([]);
+      setStats({ total_dividas: 0, pendentes: 0, total_devido: 0 });
     } finally {
       setLoading(false);
     }
