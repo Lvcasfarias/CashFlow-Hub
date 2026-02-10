@@ -70,7 +70,7 @@ export const CaixinhasPage = () => {
     const valor = parseFloat(valorDistribuir);
     
     if (!valor || valor <= 0) {
-      toast.error('Digite um valor válido');
+      toast.error('Digite um valor valido');
       return;
     }
 
@@ -79,12 +79,35 @@ export const CaixinhasPage = () => {
         valor,
         mesReferencia: new Date().toISOString().slice(0, 7),
       });
-      toast.success(`R$ ${valor.toFixed(2)} distribuído entre as caixinhas!`);
+      toast.success(`R$ ${valor.toFixed(2)} distribuido!`);
       setOpenDistribuir(false);
       setValorDistribuir('');
       fetchCaixinhas();
+      refreshBalance();
     } catch (error) {
+      console.error('Erro ao distribuir:', error);
       toast.error(error.response?.data?.error || 'Erro ao distribuir valor');
+    }
+  };
+
+  const handleDeleteCaixinha = (caixinha) => {
+    setCaixinhaToDelete(caixinha);
+    setOpenDeleteConfirm(true);
+  };
+
+  const confirmDeleteCaixinha = async () => {
+    if (!caixinhaToDelete) return;
+    
+    try {
+      await api.delete(`/api/caixinhas/${caixinhaToDelete.id}`);
+      toast.success('Caixinha excluida! Transacoes vinculadas foram desvinculadas.');
+      setOpenDeleteConfirm(false);
+      setCaixinhaToDelete(null);
+      fetchCaixinhas();
+      refreshBalance();
+    } catch (error) {
+      console.error('Erro ao excluir:', error);
+      toast.error(error.response?.data?.error || 'Erro ao excluir caixinha');
     }
   };
 
