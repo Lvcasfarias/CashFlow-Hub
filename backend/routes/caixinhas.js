@@ -149,48 +149,42 @@ router.delete('/:id', authMiddleware, async (req, res) => {
     try {
       await client.query('BEGIN');
 
-      // Verificar se o usuário quer deletar mesmo com transações (Simulado via backend por enquanto)
-      // O requisito pede Cascade ou Warning. Vamos garantir que delete tudo relacionado.
-      
-      // Deletar transações vinculadas (Cascade real)
+      // Deletar transações vinculadas (Cascade real exigido pelo usuário)
       await client.query(
         'DELETE FROM transacoes WHERE caixinha_id = $1',
         [id]
       );
 
-      // Desvincular outros itens que podem ser mantidos sem caixinha
+      // Desvincular outros itens
       await client.query(
         'UPDATE recorrencias SET caixinha_id = NULL WHERE caixinha_id = $1',
         [id]
       );
 
-      // Desvincular parceladas
       await client.query(
         'UPDATE parceladas SET caixinha_id = NULL WHERE caixinha_id = $1',
         [id]
       );
 
-      // Desvincular metas
       await client.query(
         'UPDATE metas SET caixinha_id = NULL WHERE caixinha_id = $1',
         [id]
       );
 
-      // Desvincular wishlist
       await client.query(
         'UPDATE wishlist SET caixinha_id = NULL WHERE caixinha_id = $1',
         [id]
       );
 
       // Deletar a caixinha
-      await client.query(
-        'DELETE FROM caixinhas WHERE id = $1',
+      const result = await client.query(
+        'DELETE FROM caixinhas WHERE id = $1 RETURNING id',
         [id]
       );
 
       await client.query('COMMIT');
 
-      res.json({ message: 'Caixinha excluida. Transacoes foram desvinculadas.' });
+      res.status(200).json({ message: 'Caixinha e transações excluídas com sucesso' });
     } catch (error) {
       await client.query('ROLLBACK');
       throw error;
@@ -198,7 +192,7 @@ router.delete('/:id', authMiddleware, async (req, res) => {
       client.release();
     }
   } catch (error) {
-    console.error('Erro ao deletar caixinha:', error);
+    console.error('Erro ao deletar caixinha:', error.stack);
     res.status(500).json({ error: 'Erro ao deletar caixinha' });
   }
 });

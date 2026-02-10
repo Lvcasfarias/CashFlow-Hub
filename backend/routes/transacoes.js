@@ -58,7 +58,7 @@ router.get('/', authMiddleware, async (req, res) => {
     const result = await pool.query(query, params);
     res.json(result.rows);
   } catch (error) {
-    console.error('Erro ao listar transações:', error);
+    console.error('Erro ao listar transações:', error.stack || error);
     res.status(500).json({ error: 'Erro ao listar transações' });
   }
 });
@@ -137,7 +137,7 @@ router.post('/',
         client.release();
       }
     } catch (error) {
-      console.error('Erro ao criar transação:', error);
+      console.error('Erro ao criar transação:', error.stack || error);
       res.status(500).json({ error: 'Erro ao criar transação' });
     }
   }
@@ -243,7 +243,7 @@ router.put('/:id',
         client.release();
       }
     } catch (error) {
-      console.error('Erro ao editar transação:', error);
+      console.error('Erro ao editar transação:', error.stack || error);
       res.status(500).json({ error: 'Erro ao editar transação' });
     }
   }
@@ -314,7 +314,7 @@ router.delete('/:id', authMiddleware, async (req, res) => {
       client.release();
     }
   } catch (error) {
-    console.error('Erro ao deletar transação:', error);
+    console.error('Erro ao deletar transação:', error.stack || error);
     res.status(500).json({ error: 'Erro ao deletar transação' });
   }
 });
@@ -323,8 +323,12 @@ router.delete('/:id', authMiddleware, async (req, res) => {
 router.get('/estatisticas', authMiddleware, async (req, res) => {
   try {
     const mes = req.query.mes || new Date().toISOString().slice(0, 7);
+    const [ano, mesNum] = mes.split('-').map(Number);
+    
+    // Usar o último dia real do mês para evitar erros como '2026-02-31'
+    const ultimoDia = new Date(ano, mesNum, 0).getDate();
     const dataInicio = `${mes}-01`;
-    const dataFim = `${mes}-31`;
+    const dataFim = `${mes}-${ultimoDia.toString().padStart(2, '0')}`;
 
     const result = await pool.query(
       `SELECT 
@@ -346,7 +350,7 @@ router.get('/estatisticas', authMiddleware, async (req, res) => {
       num_saidas: parseInt(stats.num_saidas) || 0
     });
   } catch (error) {
-    console.error('Erro ao obter estatísticas:', error);
+    console.error('Erro ao obter estatísticas:', error.stack);
     res.status(500).json({ error: 'Erro ao obter estatísticas' });
   }
 });

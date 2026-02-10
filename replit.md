@@ -45,3 +45,10 @@ The workflow runs both backend and frontend together:
 
 ## Recent Changes
 - 2026-02-10: Initial Replit setup - configured dev server proxy, allowed all hosts, set up PostgreSQL database with all tables
+- 2026-02-10: Fixed critical data and persistence bugs.
+  - Corrected end-of-month date logic in transacoes.js (prevented '2026-02-31' error).
+  - Improved error handling in DashboardPage.js and BalanceContext.js (added .catch to all API calls).
+  - Implemented manual CASCADE deletion for caixinhas to ensure transactions are removed.
+  - Enhanced backend logging with err.stack in catch blocks.
+  - Added robust null checks in dashboard summary calculation.
+  - Fixed Wishlist priority score calculation and variable naming bugs.

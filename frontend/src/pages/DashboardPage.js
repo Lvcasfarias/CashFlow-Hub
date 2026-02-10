@@ -21,12 +21,25 @@ export const DashboardPage = () => {
       setLoading(true);
       const mesAtual = new Date().toISOString().slice(0, 7);
       const ultimoDia = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate();
+      const ultimoDiaStr = ultimoDia.toString().padStart(2, '0');
       
       const [statsRes, caixinhasRes, transacoesRes, resumoRes] = await Promise.all([
-        api.get(`/api/transacoes/estatisticas?mes=${mesAtual}`).catch(() => ({ data: { total_entradas: 0, total_saidas: 0, saldo: 0, num_entradas: 0, num_saidas: 0 } })),
-        api.get(`/api/caixinhas?mes=${mesAtual}`).catch(() => ({ data: [] })),
-        api.get(`/api/transacoes?dataInicio=${mesAtual}-01&dataFim=${mesAtual}-${ultimoDia}`).catch(() => ({ data: [] })),
-        api.get(`/api/dashboards/resumo-geral?mes=${mesAtual}`).catch(() => ({ data: null }))
+        api.get(`/api/transacoes/estatisticas?mes=${mesAtual}`).catch(err => {
+          console.error('Erro ao buscar estatísticas:', err);
+          return { data: { total_entradas: 0, total_saidas: 0, saldo: 0, num_entradas: 0, num_saidas: 0 } };
+        }),
+        api.get(`/api/caixinhas?mes=${mesAtual}`).catch(err => {
+          console.error('Erro ao buscar caixinhas:', err);
+          return { data: [] };
+        }),
+        api.get(`/api/transacoes?dataInicio=${mesAtual}-01&dataFim=${mesAtual}-${ultimoDiaStr}`).catch(err => {
+          console.error('Erro ao buscar transações:', err);
+          return { data: [] };
+        }),
+        api.get(`/api/dashboards/resumo-geral?mes=${mesAtual}`).catch(err => {
+          console.error('Erro ao buscar resumo geral:', err);
+          return { data: null };
+        })
       ]);
 
       setStats(statsRes.data);

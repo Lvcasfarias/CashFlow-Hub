@@ -42,7 +42,7 @@ router.get('/fluxo-caixa', authMiddleware, async (req, res) => {
     const result = await pool.query(query, params);
     res.json(result.rows || []);
   } catch (error) {
-    console.error('Erro ao obter fluxo de caixa:', error);
+    console.error('Erro ao obter fluxo de caixa:', error.stack);
     res.status(500).json({ error: 'Erro ao obter fluxo de caixa' });
   }
 });
@@ -189,7 +189,7 @@ router.get('/resumo-geral', authMiddleware, async (req, res) => {
          FROM transacoes
          WHERE user_id = $1 AND TO_CHAR(data, 'YYYY-MM') = $2`,
         [req.userId, mes]
-      ),
+      ).catch(e => { console.error('Erro transacoes resumo:', e.stack); return { rows: [{}] }; }),
       pool.query(
         `SELECT 
            COALESCE(SUM(valor_alocado), 0) as total_alocado,
@@ -198,7 +198,7 @@ router.get('/resumo-geral', authMiddleware, async (req, res) => {
          FROM caixinhas
          WHERE user_id = $1 AND mes_referencia = $2`,
         [req.userId, mes]
-      ),
+      ).catch(e => { console.error('Erro caixinhas resumo:', e.stack); return { rows: [{}] }; }),
       pool.query(
         `SELECT 
            COUNT(*) as total_dividas,
@@ -206,7 +206,7 @@ router.get('/resumo-geral', authMiddleware, async (req, res) => {
          FROM dividas
          WHERE user_id = $1`,
         [req.userId]
-      ),
+      ).catch(e => { console.error('Erro dividas resumo:', e.stack); return { rows: [{}] }; }),
       pool.query(
         `SELECT 
            COUNT(*) as total_fixas,
@@ -214,7 +214,7 @@ router.get('/resumo-geral', authMiddleware, async (req, res) => {
          FROM recorrencias
          WHERE user_id = $1 AND ativo = true`,
         [req.userId]
-      ),
+      ).catch(e => { console.error('Erro recorrencias resumo:', e.stack); return { rows: [{}] }; }),
       pool.query(
         `SELECT 
            COALESCE(SUM(saldo_atual), 0) as saldo_total_contas,
@@ -222,7 +222,7 @@ router.get('/resumo-geral', authMiddleware, async (req, res) => {
          FROM contas
          WHERE user_id = $1 AND ativo = true`,
         [req.userId]
-      ),
+      ).catch(e => { console.error('Erro contas resumo:', e.stack); return { rows: [{}] }; }),
       pool.query(
         `SELECT 
            COALESCE(SUM(limite), 0) as limite_total,
@@ -230,7 +230,7 @@ router.get('/resumo-geral', authMiddleware, async (req, res) => {
          FROM cartoes
          WHERE user_id = $1 AND ativo = true`,
         [req.userId]
-      ),
+      ).catch(e => { console.error('Erro cartoes resumo:', e.stack); return { rows: [{}] }; }),
       pool.query(
         `SELECT 
            COUNT(CASE WHEN status = 'ativa' THEN 1 END) as metas_ativas,
@@ -238,29 +238,29 @@ router.get('/resumo-geral', authMiddleware, async (req, res) => {
          FROM metas
          WHERE user_id = $1`,
         [req.userId]
-      )
+      ).catch(e => { console.error('Erro metas resumo:', e.stack); return { rows: [{}] }; })
     ]);
 
     // Calcular saldo consolidado
-    const saldoContas = parseFloat(contas.rows[0].saldo_total_contas) || 0;
-    const caixinhasDisponivel = parseFloat(caixinhas.rows[0].total_disponivel) || 0;
-    const dividasDevido = parseFloat(dividas.rows[0].total_devido) || 0;
-    const utilizadoCartoes = parseFloat(cartoes.rows[0].total_utilizado_cartoes) || 0;
+    const saldoContas = parseFloat(contas.rows[0]?.saldo_total_contas) || 0;
+    const caixinhasDisponivel = parseFloat(caixinhas.rows[0]?.total_disponivel) || 0;
+    const dividasDevido = parseFloat(dividas.rows[0]?.total_devido) || 0;
+    const utilizadoCartoes = parseFloat(cartoes.rows[0]?.total_utilizado_cartoes) || 0;
     
     const saldoConsolidado = saldoContas + caixinhasDisponivel - dividasDevido - utilizadoCartoes;
 
     res.json({
-      transacoes: transacoes.rows[0],
-      caixinhas: caixinhas.rows[0],
-      dividas: dividas.rows[0],
-      recorrencias: recorrencias.rows[0],
-      contas: contas.rows[0],
-      cartoes: cartoes.rows[0],
-      metas: metas.rows[0],
+      transacoes: transacoes.rows[0] || {},
+      caixinhas: caixinhas.rows[0] || {},
+      dividas: dividas.rows[0] || {},
+      recorrencias: recorrencias.rows[0] || {},
+      contas: contas.rows[0] || {},
+      cartoes: cartoes.rows[0] || {},
+      metas: metas.rows[0] || {},
       saldo_consolidado: saldoConsolidado
     });
   } catch (error) {
-    console.error('Erro ao obter resumo geral:', error);
+    console.error('Erro ao obter resumo geral:', error.stack);
     res.status(500).json({ error: 'Erro ao obter resumo geral' });
   }
 });

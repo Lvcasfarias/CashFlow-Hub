@@ -32,7 +32,7 @@ export const BalanceProvider = ({ children }) => {
       setLoading(true);
       const mesAtual = new Date().toISOString().slice(0, 7);
       const response = await api.get(`/api/dashboards/resumo-geral?mes=${mesAtual}`).catch(err => {
-        console.error('Erro ao buscar saldo:', err);
+        console.error('Erro ao buscar saldo no BalanceContext:', err);
         return { data: null };
       });
       
@@ -48,7 +48,7 @@ export const BalanceProvider = ({ children }) => {
         });
       }
     } catch (error) {
-      console.error('Erro ao buscar saldo:', error);
+      console.error('Erro ao buscar saldo:', error.stack || error);
       // Manter valores anteriores em caso de erro
     } finally {
       setLoading(false);

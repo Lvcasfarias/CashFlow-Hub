@@ -1,0 +1,33 @@
+Contexto: Meu App CashFlow Hub está apresentando erros críticos de lógica de data e persistência. Abaixo estão os problemas identificados e os logs de erro do servidor para correção imediata.
+
+1. Erro Fatal de SQL (Data Inválida):
+
+Problema: O sistema está gerando datas impossíveis como '2026-02-31' ao tentar calcular estatísticas mensais.
+
+Log de Erro: ERROR: date/time field value out of range: "2026-02-31" at /app/routes/transacoes.js:329:20.
+
+Correção Necessária: No backend (especialmente em routes/transacoes.js), substitua a lógica manual de fim de mês por uma biblioteca como date-fns (função endOfMonth) ou use a lógica de new Date(ano, mes, 0) para obter o último dia real do mês.
+
+2. Falhas de Persistência e UI (Feedback do Usuário):
+
+Saldo Consolidado: O valor aparece no dashboard mas desaparece ao navegar entre páginas. Garanta que o estado global (Context ou Redux) revalide o saldo ou que o Layout.js busque essa informação em cada montagem de componente.
+
+Deleção de Caixinhas: Ao excluir uma caixinha, ela permanece na tela. Verifique se o frontend está disparando o setCaixinhas após a resposta bem-sucedida do servidor e se o backend está retornando status 200.
+
+Páginas Quebrando (Metas e Wishlist): A tela fica preta ao acessar Metas. Adicione blocos try/catch e estados de erro/carregamento no React para evitar o crash total da aplicação quando a API falha.
+
+3. Relatórios Limitados:
+
+A aplicação exibe apenas os últimos 6 meses. Altere a query SQL para aceitar parâmetros de data_inicio e data_fim enviados pelo frontend, permitindo visualização mês a mês customizada.
+
+4. Logs de Auditoria (Debugging):
+
+Melhore os logs do backend. Em vez de apenas Conectado ao PostgreSQL, imprima o erro completo (err.stack) nos blocos de catch das rotas para facilitar a identificação de campos nulos ou falhas de constraint.
+
+Entrega Técnica:
+
+Forneça o código corrigido para backend/routes/transacoes.js (ajuste de data).
+
+Forneça o código do frontend/src/pages/DashboardPage.js com tratamento de erro.
+
+IMPORTANTE: O backend roda na porta 8001 e o frontend na 3000. Mantenha essa configuração."
