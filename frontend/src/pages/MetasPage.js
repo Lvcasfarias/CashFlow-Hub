@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Layout } from '../components/Layout';
+import { useBalance } from '../context/BalanceContext';
 import api from '../lib/api';
 import { toast } from 'sonner';
-import { Plus, Target, TrendingUp, Calendar, Edit2, Trash2, DollarSign } from 'lucide-react';
+import { Plus, Target, Calendar, Edit2, Trash2, DollarSign } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
@@ -11,9 +12,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Progress } from '../components/ui/progress';
 
 export const MetasPage = () => {
+  const { refreshBalance } = useBalance();
   const [metas, setMetas] = useState([]);
   const [caixinhas, setCaixinhas] = useState([]);
-  const [resumo, setResumo] = useState(null);
+  const [resumo, setResumo] = useState({ ativas: 0, concluidas: 0, total_alvo_ativas: 0, total_poupado_ativas: 0 });
   const [loading, setLoading] = useState(true);
   const [openDialog, setOpenDialog] = useState(false);
   const [openAporte, setOpenAporte] = useState(false);
@@ -45,16 +47,23 @@ export const MetasPage = () => {
     try {
       setLoading(true);
       const mesAtual = new Date().toISOString().slice(0, 7);
+      
       const [metasRes, caixinhasRes, resumoRes] = await Promise.all([
-        api.get('/api/metas'),
-        api.get(`/api/caixinhas?mes=${mesAtual}`),
-        api.get('/api/metas/estatisticas/resumo')
+        api.get('/api/metas').catch(() => ({ data: [] })),
+        api.get(`/api/caixinhas?mes=${mesAtual}`).catch(() => ({ data: [] })),
+        api.get('/api/metas/estatisticas/resumo').catch(() => ({ 
+          data: { ativas: 0, concluidas: 0, total_alvo_ativas: 0, total_poupado_ativas: 0 } 
+        }))
       ]);
-      setMetas(metasRes.data);
-      setCaixinhas(caixinhasRes.data);
-      setResumo(resumoRes.data);
+      
+      setMetas(Array.isArray(metasRes.data) ? metasRes.data : []);
+      setCaixinhas(Array.isArray(caixinhasRes.data) ? caixinhasRes.data : []);
+      setResumo(resumoRes.data || { ativas: 0, concluidas: 0, total_alvo_ativas: 0, total_poupado_ativas: 0 });
     } catch (error) {
-      toast.error('Erro ao carregar metas');
+      console.error('Erro ao carregar metas:', error);
+      setMetas([]);
+      setCaixinhas([]);
+      setResumo({ ativas: 0, concluidas: 0, total_alvo_ativas: 0, total_poupado_ativas: 0 });
     } finally {
       setLoading(false);
     }
@@ -63,17 +72,29 @@ export const MetasPage = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
+      const payload = {
+        nome: formData.nome,
+        descricao: formData.descricao || null,
+        valorAlvo: parseFloat(formData.valorAlvo),
+        dataLimite: formData.dataLimite || null,
+        caixinhaId: formData.caixinhaId ? parseInt(formData.caixinhaId) : null,
+        prioridade: parseInt(formData.prioridade),
+        cor: formData.cor
+      };
+
       if (editingMeta) {
-        await api.put(`/api/metas/${editingMeta.id}`, formData);
+        await api.put(`/api/metas/${editingMeta.id}`, payload);
         toast.success('Meta atualizada!');
       } else {
-        await api.post('/api/metas', formData);
+        await api.post('/api/metas', payload);
         toast.success('Meta criada!');
       }
       setOpenDialog(false);
       resetForm();
       fetchData();
+      refreshBalance();
     } catch (error) {
+      console.error('Erro ao salvar meta:', error);
       toast.error('Erro ao salvar meta');
     }
   };
@@ -81,8 +102,14 @@ export const MetasPage = () => {
   const handleAporte = async (e) => {
     e.preventDefault();
     if (!metaSelecionada) return;
+    
     try {
-      await api.post(`/api/metas/${metaSelecionada.id}/aportar`, formAporte);
+      await api.post(`/api/metas/${metaSelecionada.id}/aportar`, {
+        valor: parseFloat(formAporte.valor),
+        dataAporte: formAporte.dataAporte,
+        observacao: formAporte.observacao || null,
+        caixinhaId: formAporte.caixinhaId ? parseInt(formAporte.caixinhaId) : null
+      });
       toast.success('Aporte realizado!');
       setOpenAporte(false);
       setMetaSelecionada(null);
@@ -93,7 +120,9 @@ export const MetasPage = () => {
         caixinhaId: ''
       });
       fetchData();
+      refreshBalance();
     } catch (error) {
+      console.error('Erro ao fazer aporte:', error);
       toast.error('Erro ao fazer aporte');
     }
   };
@@ -104,7 +133,9 @@ export const MetasPage = () => {
       await api.delete(`/api/metas/${id}`);
       toast.success('Meta excluida!');
       fetchData();
+      refreshBalance();
     } catch (error) {
+      console.error('Erro ao excluir:', error);
       toast.error('Erro ao excluir');
     }
   };
@@ -112,12 +143,12 @@ export const MetasPage = () => {
   const handleEdit = (meta) => {
     setEditingMeta(meta);
     setFormData({
-      nome: meta.nome,
+      nome: meta.nome || '',
       descricao: meta.descricao || '',
-      valorAlvo: meta.valor_alvo,
+      valorAlvo: meta.valor_alvo || '',
       dataLimite: meta.data_limite ? meta.data_limite.split('T')[0] : '',
       caixinhaId: meta.caixinha_id ? String(meta.caixinha_id) : '',
-      prioridade: String(meta.prioridade),
+      prioridade: meta.prioridade ? String(meta.prioridade) : '3',
       cor: meta.cor || '#10B981'
     });
     setOpenDialog(true);
@@ -269,7 +300,7 @@ export const MetasPage = () => {
                   />
                 </div>
                 <Button type="submit" className="w-full" data-testid="submit-meta-btn">
-                  {editingMeta ? 'Salvar Alteracoes' : 'Criar Meta'}
+                  {editingMeta ? 'Salvar' : 'Criar Meta'}
                 </Button>
               </form>
             </DialogContent>
@@ -299,7 +330,7 @@ export const MetasPage = () => {
           </div>
         )}
 
-        {metas.length === 0 ? (
+        {!metas || metas.length === 0 ? (
           <div className="bg-card border border-border/50 rounded-xl p-12 text-center">
             <Target className="w-16 h-16 mx-auto text-muted-foreground mb-4" />
             <h3 className="text-xl font-semibold mb-2">Nenhuma meta cadastrada</h3>
@@ -314,7 +345,9 @@ export const MetasPage = () => {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {metas.map((meta) => {
-              const percentual = parseFloat(meta.percentual_concluido) || 0;
+              const valorAlvo = parseFloat(meta.valor_alvo) || 0;
+              const valorAtual = parseFloat(meta.valor_atual) || 0;
+              const percentual = valorAlvo > 0 ? (valorAtual / valorAlvo * 100) : 0;
               const isCompleted = meta.status === 'concluida';
 
               return (
@@ -350,13 +383,13 @@ export const MetasPage = () => {
                         <span className="font-semibold">{percentual.toFixed(1)}%</span>
                       </div>
                       <Progress
-                        value={percentual}
+                        value={Math.min(percentual, 100)}
                         className="h-3"
                         indicatorClassName={isCompleted ? 'bg-green-500' : ''}
                       />
                       <div className="flex justify-between text-sm font-mono">
-                        <span className="text-green-500">{formatCurrency(meta.valor_atual)}</span>
-                        <span className="text-muted-foreground">{formatCurrency(meta.valor_alvo)}</span>
+                        <span className="text-green-500">{formatCurrency(valorAtual)}</span>
+                        <span className="text-muted-foreground">{formatCurrency(valorAlvo)}</span>
                       </div>
                     </div>
 
@@ -370,14 +403,9 @@ export const MetasPage = () => {
                           {new Date(meta.data_limite).toLocaleDateString('pt-BR')}
                         </span>
                       )}
-                      {meta.dias_restantes > 0 && (
-                        <span className="px-2 py-1 rounded-full bg-secondary">
-                          {meta.dias_restantes} dias restantes
-                        </span>
-                      )}
                     </div>
 
-                    {meta.valor_mensal_necessario > 0 && !isCompleted && (
+                    {meta.valor_mensal_necessario && parseFloat(meta.valor_mensal_necessario) > 0 && !isCompleted && (
                       <div className="bg-secondary/50 rounded-lg p-3">
                         <p className="text-xs text-muted-foreground">Aporte mensal sugerido:</p>
                         <p className="font-mono font-semibold text-primary">
