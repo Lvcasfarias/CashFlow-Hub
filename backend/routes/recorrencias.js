@@ -187,4 +187,111 @@ router.delete('/parceladas/:id', authMiddleware, async (req, res) => {
   }
 });
 
+// Atualizar compra parcelada
+router.put('/parceladas/:id', authMiddleware, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { descricao, valorTotal, numParcelas, diaVencimento, caixinhaId, ativo } = req.body;
+
+    // Se valorTotal ou numParcelas mudou, recalcular valor da parcela
+    let valorParcela = null;
+    if (valorTotal !== undefined && numParcelas !== undefined) {
+      valorParcela = valorTotal / numParcelas;
+    }
+
+    const result = await pool.query(
+      `UPDATE parceladas 
+       SET descricao = COALESCE($1, descricao),
+           valor_total = COALESCE($2, valor_total),
+           num_parcelas = COALESCE($3, num_parcelas),
+           valor_parcela = COALESCE($4, valor_parcela),
+           dia_vencimento = COALESCE($5, dia_vencimento),
+           caixinha_id = COALESCE($6, caixinha_id),
+           ativo = COALESCE($7, ativo)
+       WHERE id = $8 AND user_id = $9
+       RETURNING *`,
+      [descricao, valorTotal, numParcelas, valorParcela, diaVencimento, caixinhaId, ativo, id, req.userId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Parcelada não encontrada' });
+    }
+
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('Erro ao atualizar parcelada:', error);
+    res.status(500).json({ error: 'Erro ao atualizar parcelada' });
+  }
+});
+
+// Pagar parcela
+router.post('/parceladas/:id/pagar-parcela', authMiddleware, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { caixinhaId } = req.body;
+
+    const client = await pool.connect();
+
+    try {
+      await client.query('BEGIN');
+
+      // Buscar parcelada
+      const parceladaResult = await client.query(
+        'SELECT * FROM parceladas WHERE id = $1 AND user_id = $2',
+        [id, req.userId]
+      );
+
+      if (parceladaResult.rows.length === 0) {
+        await client.query('ROLLBACK');
+        return res.status(404).json({ error: 'Parcelada não encontrada' });
+      }
+
+      const parcelada = parceladaResult.rows[0];
+
+      if (parcelada.parcelas_pagas >= parcelada.num_parcelas) {
+        await client.query('ROLLBACK');
+        return res.status(400).json({ error: 'Todas as parcelas já foram pagas' });
+      }
+
+      // Incrementar parcelas pagas
+      const novasParcelas = (parcelada.parcelas_pagas || 0) + 1;
+      const novoAtivo = novasParcelas < parcelada.num_parcelas;
+
+      await client.query(
+        `UPDATE parceladas 
+         SET parcelas_pagas = $1, ativo = $2
+         WHERE id = $3`,
+        [novasParcelas, novoAtivo, id]
+      );
+
+      // Se caixinhaId fornecido, debitar
+      if (caixinhaId) {
+        await client.query(
+          `UPDATE caixinhas 
+           SET valor_gasto = valor_gasto + $1,
+               saldo_disponivel = valor_alocado - (valor_gasto + $1)
+           WHERE id = $2`,
+          [parcelada.valor_parcela, caixinhaId]
+        );
+      }
+
+      await client.query('COMMIT');
+
+      res.json({ 
+        message: novoAtivo ? 'Parcela paga com sucesso' : 'Última parcela paga! Compra quitada.',
+        parcelas_pagas: novasParcelas,
+        parcelas_restantes: parcelada.num_parcelas - novasParcelas
+      });
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
+  } catch (error) {
+    console.error('Erro ao pagar parcela:', error);
+    res.status(500).json({ error: 'Erro ao pagar parcela' });
+  }
+});
+
 module.exports = router;
